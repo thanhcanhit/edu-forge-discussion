@@ -6,6 +6,14 @@ import { SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable CORS
+  app.enableCors({
+    origin: true, // Allows all origins
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Accept'],
+    credentials: false,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('Edu Forge Discussion API')
     .setDescription('The discussion API description')
@@ -16,7 +24,6 @@ async function bootstrap() {
   SwaggerModule.setup('api/v1/docs', app, documentFactory);
 
   app.setGlobalPrefix('api/v1');
-
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
