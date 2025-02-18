@@ -1,1 +1,636 @@
-��<
+��< <!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Discussion UI</title>
+    <style>
+      /* Reset & cơ bản */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f2f5;
+      }
+
+      header {
+        background-color: #4267b2;
+        color: #fff;
+        padding: 10px 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .container {
+        display: flex;
+        height: calc(100vh - 50px);
+      }
+
+      /* Sidebar chứa danh sách chủ đề */
+      .sidebar {
+        width: 300px;
+        background: #fff;
+        border-right: 1px solid #ccc;
+        padding: 10px;
+        overflow-y: auto;
+      }
+
+      .sidebar h3 {
+        margin-bottom: 10px;
+      }
+
+      .thread {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+      }
+
+      .thread:hover {
+        background-color: #f0f0f0;
+      }
+
+      .active-thread {
+        background-color: #e9ecef;
+      }
+
+      .new-thread {
+        margin-top: 15px;
+        padding: 10px;
+        border-top: 1px solid #ccc;
+      }
+
+      .new-thread input,
+      .new-thread textarea,
+      .new-thread select {
+        width: 100%;
+        margin-bottom: 5px;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+
+      .new-thread button {
+        width: 100%;
+        background-color: #4267b2;
+        color: #fff;
+        border: none;
+        padding: 8px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .new-thread button:hover {
+        background-color: #365899;
+      }
+
+      /* Khu vực hiển thị bình luận */
+      .discussion-area {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      .discussion-area h2 {
+        margin-bottom: 15px;
+      }
+
+      .post {
+        background: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+      }
+
+      .post .author {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      .post .content {
+        margin-bottom: 5px;
+      }
+
+      .post .timestamp {
+        font-size: 12px;
+        color: gray;
+      }
+
+      .post .actions {
+        margin-top: 8px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .post .like-btn {
+        background: none;
+        border: none;
+        color: #4267b2;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .post .like-btn.liked {
+        color: #e41e3f;
+      }
+
+      .post .like-count {
+        color: #65676b;
+        font-size: 13px;
+      }
+
+      .post .reply-btn {
+        background: none;
+        border: none;
+        color: #4267b2;
+        cursor: pointer;
+      }
+
+      .replies {
+        margin-left: 20px;
+        margin-top: 10px;
+      }
+
+      .reply-form {
+        margin-top: 8px;
+        display: none;
+      }
+
+      .reply-form textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        resize: vertical;
+        margin-bottom: 5px;
+      }
+
+      .reply-form button {
+        background-color: #4267b2;
+        color: #fff;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .pagination {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .pagination button {
+        padding: 5px 10px;
+        border: 1px solid #ccc;
+        background: #fff;
+        cursor: pointer;
+      }
+
+      .pagination button:disabled {
+        background: #f0f0f0;
+        cursor: not-allowed;
+      }
+
+      .rating-input {
+        width: 60px !important;
+        display: inline-block !important;
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h1>Discussion</h1>
+    </header>
+    <div class="container">
+      <div class="sidebar">
+        <h3>Chủ đề</h3>
+        <div id="thread-list">
+          <p>Đang tải...</p>
+        </div>
+        <div class="new-thread">
+          <h4>Tạo chủ đề mới</h4>
+          <select id="thread-type">
+            <option value="LESSON_DISCUSSION">Thảo luận bài học</option>
+            <option value="COURSE_REVIEW">Đánh giá khóa học</option>
+          </select>
+          <input type="text" id="course-id" placeholder="ID khóa học" />
+          <input type="text" id="lesson-id" placeholder="ID bài học" />
+          <input
+            type="text"
+            id="new-thread-title"
+            placeholder="Tiêu đề chủ đề"
+          />
+          <textarea
+            id="new-thread-content"
+            rows="3"
+            placeholder="Nội dung ban đầu"
+          ></textarea>
+          <input
+            type="number"
+            id="initial-rating"
+            class="rating-input"
+            placeholder="Đánh giá (1-5)"
+            min="1"
+            max="5"
+          />
+          <button id="create-thread-btn">Tạo chủ đề</button>
+        </div>
+      </div>
+      <div class="discussion-area">
+        <h2 id="thread-title">Chọn chủ đề để xem bình luận</h2>
+        <div id="post-list"></div>
+        <div class="pagination">
+          <button id="prev-page" disabled>Trang trước</button>
+          <span id="page-info">Trang 1</span>
+          <button id="next-page">Trang sau</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const BASE_URL = 'http://localhost:3000/api/v1';
+      let currentThreadId = null;
+      let currentPage = 1;
+      const POSTS_PER_PAGE = 10;
+      const MOCK_USER_ID = 'user-123'; // Thay thế bằng user ID thực khi có auth
+
+      // Hàm lấy danh sách chủ đề
+      async function fetchThreads() {
+        const type = document.getElementById('thread-type').value;
+        const courseId = document.getElementById('course-id').value;
+        const lessonId = document.getElementById('lesson-id').value;
+
+        try {
+          const queryParams = new URLSearchParams({
+            type,
+            ...(courseId && { courseId }),
+            ...(lessonId && { lessonId }),
+            page: '1',
+            limit: '20',
+          });
+
+          const response = await fetch(`${BASE_URL}/threads?${queryParams}`);
+          if (!response.ok) throw new Error('Lỗi khi lấy danh sách chủ đề');
+
+          const data = await response.json();
+          renderThreadList(data.threads);
+        } catch (error) {
+          console.error(error);
+          document.getElementById('thread-list').innerHTML =
+            '<p>Không tải được chủ đề.</p>';
+        }
+      }
+
+      // Render danh sách chủ đề
+      function renderThreadList(threads) {
+        const threadListDiv = document.getElementById('thread-list');
+        threadListDiv.innerHTML = '';
+
+        if (!threads || threads.length === 0) {
+          threadListDiv.innerHTML = '<p>Không có chủ đề nào.</p>';
+          return;
+        }
+
+        threads.forEach((thread) => {
+          const div = document.createElement('div');
+          div.className = 'thread';
+          // Hiển thị thêm thông tin về thread
+          div.innerHTML = `
+            <div><strong>Chủ đề #${thread.id}</strong></div>
+            <div>Loại: ${thread.type}</div>
+            ${thread.courseId ? `<div>Khóa học: ${thread.courseId}</div>` : ''}
+            ${thread.lessonId ? `<div>Bài học: ${thread.lessonId}</div>` : ''}
+            <div>Số bài viết: ${thread._count.posts}</div>
+            <div class="timestamp">Tạo lúc: ${new Date(thread.createdAt).toLocaleString()}</div>
+          `;
+
+          div.addEventListener('click', () => {
+            document
+              .querySelectorAll('.thread')
+              .forEach((el) => el.classList.remove('active-thread'));
+            div.classList.add('active-thread');
+            currentThreadId = thread.id;
+            currentPage = 1;
+            document.getElementById('thread-title').textContent =
+              `Chủ đề #${thread.id}`;
+            fetchPosts(thread.id);
+          });
+          threadListDiv.appendChild(div);
+        });
+      }
+
+      // Lấy danh sách posts cho thread
+      async function fetchPosts(threadId, page = 1) {
+        try {
+          const response = await fetch(
+            `${BASE_URL}/posts/thread/${threadId}?page=${page}&limit=${POSTS_PER_PAGE}`,
+          );
+          if (!response.ok) throw new Error('Lỗi khi lấy danh sách bình luận');
+
+          const responseData = await response.json();
+          await renderPosts(responseData.data);
+          updatePagination(responseData.meta);
+        } catch (error) {
+          console.error(error);
+          document.getElementById('post-list').innerHTML =
+            '<p>Không tải được bình luận.</p>';
+        }
+      }
+
+      // Kiểm tra trạng thái like của post
+      async function checkLikeStatus(postId) {
+        try {
+          const response = await fetch(
+            `${BASE_URL}/posts/${postId}/likes/check?userId=${MOCK_USER_ID}`,
+          );
+          if (!response.ok) throw new Error('Lỗi khi kiểm tra trạng thái like');
+
+          const { hasLiked } = await response.json();
+          return hasLiked;
+        } catch (error) {
+          console.error(error);
+          return false;
+        }
+      }
+
+      // Lấy số lượng like của post
+      async function getLikeCount(postId) {
+        try {
+          const response = await fetch(
+            `${BASE_URL}/posts/${postId}/likes/count`,
+          );
+          if (!response.ok) throw new Error('Lỗi khi lấy số lượng like');
+
+          const { count } = await response.json();
+          return count;
+        } catch (error) {
+          console.error(error);
+          return 0;
+        }
+      }
+
+      // Toggle like post
+      async function toggleLike(postId, likeButton) {
+        try {
+          const isLiked = likeButton.classList.contains('liked');
+          const method = isLiked ? 'DELETE' : 'POST';
+
+          const response = await fetch(`${BASE_URL}/posts/${postId}/likes`, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: MOCK_USER_ID }),
+          });
+
+          if (!response.ok) throw new Error('Lỗi khi thực hiện like/unlike');
+
+          // Update UI
+          likeButton.classList.toggle('liked');
+          const countSpan = likeButton.nextElementSibling;
+          const currentCount = parseInt(countSpan.textContent);
+          countSpan.textContent = isLiked ? currentCount - 1 : currentCount + 1;
+        } catch (error) {
+          console.error(error);
+          alert('Có lỗi khi thực hiện like/unlike');
+        }
+      }
+
+      // Render posts
+      async function renderPosts(posts) {
+        const postListDiv = document.getElementById('post-list');
+        postListDiv.innerHTML = '';
+
+        if (!posts || posts.length === 0) {
+          postListDiv.innerHTML = '<p>Chưa có bình luận nào.</p>';
+          return;
+        }
+
+        for (const post of posts) {
+          const postDiv = document.createElement('div');
+          postDiv.className = 'post';
+
+          const hasLiked = await checkLikeStatus(post.id);
+          const likeCount = await getLikeCount(post.id);
+
+          postDiv.innerHTML = `
+            <div class="author">${post.authorId || 'Ẩn danh'}</div>
+            <div class="content">${post.content}</div>
+            ${post.rating ? `<div class="rating">Đánh giá: ${post.rating}/5</div>` : ''}
+            <div class="timestamp">${new Date(post.createdAt).toLocaleString()}</div>
+            <div class="actions">
+              <button class="like-btn ${hasLiked ? 'liked' : ''}" onclick="toggleLike(${post.id}, this)">
+                ${hasLiked ? '❤️' : '🤍'} Thích
+              </button>
+              <span class="like-count">${likeCount}</span>
+              <button class="reply-btn" onclick="toggleReplyForm(${post.id})">Trả lời</button>
+            </div>
+            <div class="reply-form" id="reply-form-${post.id}">
+              <textarea placeholder="Nhập câu trả lời..."></textarea>
+              <button onclick="submitReply(${post.id})">Gửi</button>
+            </div>
+            <div class="replies" id="replies-${post.id}"></div>
+          `;
+
+          postListDiv.appendChild(postDiv);
+
+          // Fetch and render replies
+          if (!post.parentId) {
+            await fetchReplies(post.id);
+          }
+        }
+      }
+
+      // Toggle reply form
+      function toggleReplyForm(postId) {
+        const form = document.getElementById(`reply-form-${postId}`);
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      }
+
+      // Submit reply
+      async function submitReply(parentPostId) {
+        const form = document.getElementById(`reply-form-${parentPostId}`);
+        const content = form.querySelector('textarea').value.trim();
+
+        if (!content) {
+          alert('Vui lòng nhập nội dung trả lời');
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `${BASE_URL}/posts/thread/${currentThreadId}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content,
+                authorId: MOCK_USER_ID,
+                parentId: parentPostId,
+              }),
+            },
+          );
+
+          if (!response.ok) throw new Error('Gửi trả lời thất bại');
+
+          form.querySelector('textarea').value = '';
+          form.style.display = 'none';
+          await fetchPosts(currentThreadId, currentPage);
+        } catch (error) {
+          console.error(error);
+          alert('Có lỗi khi gửi trả lời');
+        }
+      }
+
+      // Fetch replies
+      async function fetchReplies(parentPostId) {
+        try {
+          const response = await fetch(
+            `${BASE_URL}/posts/thread/${currentThreadId}?parentId=${parentPostId}`,
+          );
+          if (!response.ok) throw new Error('Lỗi khi lấy danh sách trả lời');
+
+          const responseData = await response.json();
+          const repliesDiv = document.getElementById(`replies-${parentPostId}`);
+
+          for (const reply of responseData.data) {
+            const replyDiv = document.createElement('div');
+            replyDiv.className = 'post';
+
+            const hasLiked = await checkLikeStatus(reply.id);
+            const likeCount = await getLikeCount(reply.id);
+
+            replyDiv.innerHTML = `
+              <div class="author">${reply.authorId || 'Ẩn danh'}</div>
+              <div class="content">${reply.content}</div>
+              <div class="timestamp">${new Date(reply.createdAt).toLocaleString()}</div>
+              <div class="actions">
+                <button class="like-btn ${hasLiked ? 'liked' : ''}" onclick="toggleLike(${reply.id}, this)">
+                  ${hasLiked ? '❤️' : '🤍'} Thích
+                </button>
+                <span class="like-count">${likeCount}</span>
+              </div>
+            `;
+
+            repliesDiv.appendChild(replyDiv);
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      // Update pagination
+      function updatePagination(meta) {
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        const pageInfo = document.getElementById('page-info');
+
+        prevBtn.disabled = meta.page === 1;
+        nextBtn.disabled = meta.page >= meta.totalPages;
+        pageInfo.textContent = `Trang ${meta.page} / ${meta.totalPages}`;
+
+        prevBtn.onclick = () => {
+          if (currentPage > 1) {
+            currentPage--;
+            fetchPosts(currentThreadId, currentPage);
+          }
+        };
+
+        nextBtn.onclick = () => {
+          if (currentPage < meta.totalPages) {
+            currentPage++;
+            fetchPosts(currentThreadId, currentPage);
+          }
+        };
+      }
+
+      // Create new thread
+      async function createThread() {
+        const type = document.getElementById('thread-type').value;
+        const courseId = document.getElementById('course-id').value;
+        const lessonId = document.getElementById('lesson-id').value;
+        const content = document
+          .getElementById('new-thread-content')
+          .value.trim();
+        const rating = document.getElementById('initial-rating').value;
+
+        if (!content) {
+          alert('Vui lòng nhập nội dung');
+          return;
+        }
+
+        // Validate required fields based on thread type
+        if (type === 'LESSON_DISCUSSION' && !lessonId) {
+          alert('Vui lòng nhập ID bài học cho chủ đề thảo luận');
+          return;
+        }
+        if (type === 'COURSE_REVIEW' && !courseId) {
+          alert('Vui lòng nhập ID khóa học cho đánh giá');
+          return;
+        }
+        if (type === 'COURSE_REVIEW' && (!rating || rating < 1 || rating > 5)) {
+          alert('Vui lòng nhập đánh giá từ 1-5 sao cho đánh giá khóa học');
+          return;
+        }
+
+        const payload = {
+          type,
+          ...(courseId && { courseId }),
+          ...(lessonId && { lessonId }),
+          initialPost: {
+            content,
+            authorId: MOCK_USER_ID,
+            ...(rating && { rating: parseInt(rating) }),
+          },
+        };
+
+        try {
+          const response = await fetch(`${BASE_URL}/threads/create`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.message || 'Tạo chủ đề thất bại');
+          }
+
+          alert('Chủ đề đã được tạo!');
+          // Reset form
+          document.getElementById('course-id').value = '';
+          document.getElementById('lesson-id').value = '';
+          document.getElementById('new-thread-content').value = '';
+          document.getElementById('initial-rating').value = '';
+          await fetchThreads();
+        } catch (error) {
+          console.error(error);
+          alert(error.message || 'Có lỗi khi tạo chủ đề');
+        }
+      }
+
+      // Event listeners
+      document
+        .getElementById('create-thread-btn')
+        .addEventListener('click', createThread);
+      document
+        .getElementById('thread-type')
+        .addEventListener('change', fetchThreads);
+
+      // Initial load
+      fetchThreads();
+    </script>
+  </body>
+</html>

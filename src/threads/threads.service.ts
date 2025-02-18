@@ -124,7 +124,22 @@ export class ThreadsService {
         });
       }
 
-      return this.findOne(thread.id, true);
+      // Use transaction context to find the thread
+      const createdThread = await tx.thread.findFirst({
+        where: { id: thread.id, deletedAt: null },
+        include: {
+          posts: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!createdThread) {
+        throw new NotFoundException(`Thread #${thread.id} not found`);
+      }
+
+      return createdThread;
     });
   }
 
