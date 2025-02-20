@@ -21,7 +21,7 @@ enum DiscussionType {
 /// Một thread có thể liên kết với một khóa học (nếu là đánh giá) hoặc một bài học (nếu là bàn luận).
 /// Chúng ta cũng thêm trường `deletedAt` để hỗ trợ soft delete.
 model Thread {
-  id        String          @id @default(uuid()) @db.Uuid
+  id        String         @id @default(uuid()) @db.Uuid
   type      DiscussionType
   /// Nếu thread là đánh giá khóa học, trường này bắt buộc có giá trị (ID của khóa học từ Course Service).
   courseId  String?
@@ -45,15 +45,15 @@ model Thread {
 /// - Trường `rating` chỉ có ý nghĩa với các bài đánh giá (thường là post đầu của thread khi type = COURSE_REVIEW).
 /// - Trường `isEdited` giúp theo dõi việc chỉnh sửa nội dung.
 model Post {
-  id       String   @id @default(uuid()) @db.Uuid
-  threadId String   @db.Uuid
-  thread   Thread   @relation(fields: [threadId], references: [id])
+  id       String @id @default(uuid()) @db.Uuid
+  threadId String @db.Uuid
+  thread   Thread @relation(fields: [threadId], references: [id])
 
   /// Nếu post này là reply của post khác, trường parentId sẽ chứa ID của post cha.
-  parentId String?  @db.Uuid
-  parent   Post?    @relation("PostReplies", fields: [parentId], references: [id])
+  parentId String? @db.Uuid
+  parent   Post?   @relation("PostReplies", fields: [parentId], references: [id])
   /// Tập hợp các reply trực tiếp của post này.
-  replies  Post[]   @relation("PostReplies")
+  replies  Post[]  @relation("PostReplies")
 
   /// ID của tác giả post, được lấy từ User Service (có thể là UUID hay string).
   authorId String
