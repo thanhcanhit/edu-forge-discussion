@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // seed.ts
-import { PrismaClient, DiscussionType } from '@prisma/client';
+import { PrismaClient, DiscussionType, ReactionType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -25,6 +25,16 @@ const UUIDS = {
     O: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a25',
     P: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a26',
   },
+  // Courses
+  courses: {
+    course101: 'e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e11',
+    course303: 'e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e12',
+  },
+  // Lessons
+  lessons: {
+    lesson202: 'f0eebc99-9c0b-4ef8-bb6d-6bb9bd380f11',
+    lesson404: 'f0eebc99-9c0b-4ef8-bb6d-6bb9bd380f12',
+  },
   // Threads
   threads: {
     courseReview: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b11',
@@ -48,20 +58,20 @@ const UUIDS = {
     lessonPost3: 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380c22',
     softDeletedPost: 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380c23',
   },
-  // Likes
-  likes: {
+  // Reactions
+  reactions: {
     like1: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d11',
     like2: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d12',
-    like3: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d13',
-    like4: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d14',
-    like5: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d15',
-    like6: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d16',
+    love1: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d13',
+    wow1: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d14',
+    haha1: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d15',
+    care1: 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380d16',
   },
 } as const;
 
 async function cleanup() {
   // Clean up existing data in reverse order of dependencies
-  await prisma.like.deleteMany({});
+  await prisma.reaction.deleteMany({});
   await prisma.post.deleteMany({});
   await prisma.thread.deleteMany({});
 
@@ -81,7 +91,7 @@ async function main() {
     data: {
       id: UUIDS.threads.courseReview,
       type: DiscussionType.COURSE_REVIEW,
-      courseId: 'course-101',
+      courseId: UUIDS.courses.course101,
     },
   });
 
@@ -145,12 +155,11 @@ async function main() {
   // Thread 2: Lesson Discussion với chuỗi reply kéo dài
   // =========================================================
 
-  // Tạo thread bàn luận bài học
   const lessonDiscussionThread = await prisma.thread.create({
     data: {
       id: UUIDS.threads.lessonDiscussion,
       type: DiscussionType.LESSON_DISCUSSION,
-      lessonId: 'lesson-202',
+      lessonId: UUIDS.lessons.lesson202,
     },
   });
 
@@ -207,7 +216,7 @@ async function main() {
     data: {
       id: UUIDS.threads.singlePostReview,
       type: DiscussionType.COURSE_REVIEW,
-      courseId: 'course-303',
+      courseId: UUIDS.courses.course303,
     },
   });
 
@@ -230,7 +239,7 @@ async function main() {
     data: {
       id: UUIDS.threads.multiplePostsDiscussion,
       type: DiscussionType.LESSON_DISCUSSION,
-      lessonId: 'lesson-404',
+      lessonId: UUIDS.lessons.lesson404,
     },
   });
 
@@ -254,54 +263,60 @@ async function main() {
   });
 
   // =========================================================
-  // Tạo Like cho các bài đăng
+  // Tạo Reaction cho các bài đăng
   // =========================================================
 
-  // Like cho bài đăng chính của Thread 1
-  await prisma.like.create({
+  // Reactions cho bài đăng chính của Thread 1
+  await prisma.reaction.create({
     data: {
-      id: UUIDS.likes.like1,
+      id: UUIDS.reactions.like1,
       postId: post1.id,
       userId: UUIDS.users.L,
+      type: ReactionType.LIKE,
     },
   });
-  await prisma.like.create({
+  await prisma.reaction.create({
     data: {
-      id: UUIDS.likes.like2,
+      id: UUIDS.reactions.love1,
       postId: post1.id,
       userId: UUIDS.users.M,
+      type: ReactionType.LOVE,
     },
   });
-  await prisma.like.create({
+  await prisma.reaction.create({
     data: {
-      id: UUIDS.likes.like3,
+      id: UUIDS.reactions.care1,
       postId: post1.id,
       userId: UUIDS.users.N,
+      type: ReactionType.CARE,
     },
   });
 
-  // Like cho bài đăng chính của Thread 2
-  await prisma.like.create({
+  // Reaction cho bài đăng chính của Thread 2
+  await prisma.reaction.create({
     data: {
-      id: UUIDS.likes.like4,
+      id: UUIDS.reactions.wow1,
       postId: lessonPost1.id,
       userId: UUIDS.users.O,
+      type: ReactionType.WOW,
     },
   });
 
-  // Like cho từng bài đăng của Thread 4
-  await prisma.like.create({
+  // Reactions cho từng bài đăng của Thread 4
+  await prisma.reaction.create({
     data: {
-      id: UUIDS.likes.like5,
+      id: UUIDS.reactions.like2,
       postId: lessonPost2.id,
       userId: UUIDS.users.J,
+      type: ReactionType.LIKE,
     },
   });
-  await prisma.like.create({
+  await prisma.reaction.create({
     data: {
-      id: UUIDS.likes.like6,
+      id: UUIDS.reactions.haha1,
       postId: lessonPost3.id,
       userId: UUIDS.users.K,
+      type: ReactionType.HAHA,
     },
   });
 

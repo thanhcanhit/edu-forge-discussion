@@ -9,85 +9,73 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/// Enum xác định loại thảo luận:
-/// - COURSE_REVIEW: đánh giá khóa học (yêu cầu courseId được set)
-/// - LESSON_DISCUSSION: bàn luận bài học (yêu cầu lessonId được set)
+/// Type of discussion thread
 enum DiscussionType {
-  COURSE_REVIEW
-  LESSON_DISCUSSION
+  COURSE_REVIEW // Requires courseId
+  LESSON_DISCUSSION // Requires lessonId
 }
 
-/// Model Thread đại diện cho một chủ đề thảo luận.
-/// Một thread có thể liên kết với một khóa học (nếu là đánh giá) hoặc một bài học (nếu là bàn luận).
-/// Chúng ta cũng thêm trường `deletedAt` để hỗ trợ soft delete.
+/// Available reaction types (Facebook-style)
+enum ReactionType {
+  LIKE // 👍
+  LOVE // ❤️
+  CARE // 🤗
+  HAHA // 😄
+  WOW // 😮
+  SAD // 😢
+  ANGRY // 😠
+}
+
+/// Represents a discussion thread that can be linked to either a course or lesson
 model Thread {
   id        String         @id @default(uuid()) @db.Uuid
   type      DiscussionType
-  /// Nếu thread là đánh giá khóa học, trường này bắt buộc có giá trị (ID của khóa học từ Course Service).
-  courseId  String?
-  /// Nếu thread là bàn luận bài học, trường này bắt buộc có giá trị (ID của bài học từ Course Service).
-  lessonId  String?
+  courseId  String?       @db.Uuid // Required for COURSE_REVIEW
+  lessonId  String?       @db.Uuid // Required for LESSON_DISCUSSION
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
-  /// Hỗ trợ soft delete: khi xóa mềm, trường này được set thay vì xóa dòng dữ liệu.
-  deletedAt DateTime?
-
-  /// Một thread có thể có nhiều bài đăng (post).
-  posts Post[]
+  deletedAt DateTime? // Supports soft delete
+  posts     Post[]
 
   @@index([courseId])
   @@index([lessonId])
 }
 
-/// Model Post đại diện cho từng bài đăng trong thread.
-/// Một post có thể là bài đăng chính, comment hay reply.
-/// - Sử dụng quan hệ tự tham chiếu qua `parentId` để xây dựng cây comment/reply.
-/// - Trường `rating` chỉ có ý nghĩa với các bài đánh giá (thường là post đầu của thread khi type = COURSE_REVIEW).
-/// - Trường `isEdited` giúp theo dõi việc chỉnh sửa nội dung.
+/// Represents a post within a thread (main post, comment, or reply)
 model Post {
   id       String @id @default(uuid()) @db.Uuid
   threadId String @db.Uuid
   thread   Thread @relation(fields: [threadId], references: [id])
 
-  /// Nếu post này là reply của post khác, trường parentId sẽ chứa ID của post cha.
   parentId String? @db.Uuid
   parent   Post?   @relation("PostReplies", fields: [parentId], references: [id])
-  /// Tập hợp các reply trực tiếp của post này.
   replies  Post[]  @relation("PostReplies")
 
-  /// ID của tác giả post, được lấy từ User Service (có thể là UUID hay string).
-  authorId String
-  /// Nội dung của bài đăng.
+  authorId String // User ID from User Service
   content  String
-
-  /// Dành cho bài đánh giá khóa học: cho phép người dùng đánh giá (ví dụ: từ 1 đến 5 sao).
-  rating Int?
-
-  /// Cờ đánh dấu xem bài đăng đã được chỉnh sửa hay chưa.
+  rating   Int? // Only for course reviews
   isEdited Boolean @default(false)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  /// Hỗ trợ soft delete.
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   deletedAt DateTime?
-
-  /// Danh sách like cho bài đăng này.
-  likes Like[]
+  reactions Reaction[]
 
   @@index([parentId])
   @@index([threadId])
 }
 
-/// Model Like đại diện cho hành động "like" của một người dùng lên một bài đăng.
-/// Ràng buộc unique trên cặp (postId, userId) đảm bảo một user chỉ like 1 post duy nhất.
-model Like {
-  id        String   @id @default(uuid()) @db.Uuid
-  postId    String   @db.Uuid
-  post      Post     @relation(fields: [postId], references: [id])
-  /// ID của user đã like (lấy từ User Service).
-  userId    String
-  createdAt DateTime @default(now())
+/// Represents a user's reaction to a post (one reaction per user per post)
+model Reaction {
+  id        String       @id @default(uuid()) @db.Uuid
+  postId    String       @db.Uuid
+  post      Post         @relation(fields: [postId], references: [id])
+  userId    String // User ID from User Service
+  type      ReactionType
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   @@unique([postId, userId])
   @@index([userId])
+  @@index([type])
 }
