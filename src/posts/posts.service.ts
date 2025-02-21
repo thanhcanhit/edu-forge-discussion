@@ -3,160 +3,156 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+import { DiscussionType, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PostsService {
   constructor(private prisma: PrismaClient) {}
 
-  async getPostsByThreadId(
-    threadId: number,
-    {
-      parentId,
-      page = 1,
-      limit = 10,
-    }: { parentId?: number; page?: number; limit?: number },
-  ) {
-    const skip = (page - 1) * limit;
+  async create(authorId: string, createPostDto: CreatePostDto) {
+    // Validate thread exists and get its type
+    const thread = await this.prisma.thread.findUnique({
+      where: { id: createPostDto.threadId },
+    });
 
-    const where: Prisma.PostWhereInput = {
-      threadId,
-      deletedAt: null,
-      ...(parentId !== undefined && { parentId }),
-    };
+    if (!thread) {
+      throw new NotFoundException('Thread not found');
+    }
 
-    const [posts, total] = await Promise.all([
-      this.prisma.post.findMany({
-        where,
-        include: {
-          replies: {
-            where: { deletedAt: null },
-            orderBy: { createdAt: 'asc' },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.post.count({ where }),
-    ]);
+    // Validate parent post if specified
+    if (createPostDto.parentId) {
+      const parentPost = await this.prisma.post.findUnique({
+        where: { id: createPostDto.parentId },
+      });
 
-    return {
-      data: posts,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+      if (!parentPost) {
+        throw new NotFoundException('Parent post not found');
+      }
+
+      if (parentPost.threadId !== createPostDto.threadId) {
+        throw new BadRequestException(
+          'Parent post must belong to the same thread',
+        );
+      }
+
+      // Replies cannot have ratings
+      if (createPostDto.rating) {
+        throw new BadRequestException('Reply posts cannot have ratings');
+      }
+    }
+
+    // Only allow ratings for main posts in COURSE_REVIEW threads
+    if (
+      createPostDto.rating &&
+      !createPostDto.parentId &&
+      thread.type !== DiscussionType.COURSE_REVIEW
+    ) {
+      throw new BadRequestException(
+        'Ratings are only allowed for main posts in course review threads',
+      );
+    }
+
+    return this.prisma.post.create({
+      data: {
+        ...createPostDto,
+        authorId,
       },
-    };
+      include: {
+        replies: true,
+        reactions: true,
+      },
+    });
   }
 
-  async getPostById(id: number) {
-    const post = await this.prisma.post.findFirst({
-      where: { id, deletedAt: null },
+  async findAll(includeDeleted = false) {
+    return this.prisma.post.findMany({
+      where: includeDeleted ? {} : { deletedAt: null },
+      include: {
+        replies: true,
+        reactions: true,
+      },
+    });
+  }
+
+  async findOne(id: string, includeDeleted = false) {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
       include: {
         replies: {
-          where: { deletedAt: null },
-          orderBy: { createdAt: 'asc' },
+          include: {
+            replies: true,
+            reactions: true,
+          },
         },
+        reactions: true,
       },
     });
 
-    if (!post) {
-      throw new NotFoundException(`Post with ID ${id} not found`);
+    if (!post || (!includeDeleted && post.deletedAt)) {
+      throw new NotFoundException('Post not found');
     }
 
     return post;
   }
 
-  async createPost(
-    threadId: number,
-    data: {
-      content: string;
-      authorId: string;
-      parentId?: number;
-      rating?: number;
-    },
-  ) {
-    // Validate thread exists
-    const thread = await this.prisma.thread.findUnique({
-      where: { id: threadId },
-    });
-
-    if (!thread) {
-      throw new NotFoundException(`Thread with ID ${threadId} not found`);
-    }
-
-    // If parentId is provided, validate parent post exists and belongs to same thread
-    if (data.parentId) {
-      const parentPost = await this.prisma.post.findFirst({
-        where: { id: data.parentId, threadId, deletedAt: null },
-      });
-
-      if (!parentPost) {
-        throw new BadRequestException(
-          `Parent post with ID ${data.parentId} not found in thread ${threadId}`,
-        );
-      }
-    }
-
-    return this.prisma.post.create({
-      data: {
-        threadId,
-        content: data.content,
-        authorId: data.authorId,
-        parentId: data.parentId,
-        rating: data.rating,
-      },
-      include: {
-        thread: true,
-      },
-    });
-  }
-
-  async updatePost(
-    id: number,
-    authorId: string,
-    data: { content: string; rating?: number },
-  ) {
-    const post = await this.prisma.post.findFirst({
-      where: { id, deletedAt: null },
+  async update(id: string, authorId: string, updatePostDto: UpdatePostDto) {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      include: { thread: true },
     });
 
     if (!post) {
-      throw new NotFoundException(`Post with ID ${id} not found`);
+      throw new NotFoundException('Post not found');
     }
 
     if (post.authorId !== authorId) {
-      throw new BadRequestException('You can only edit your own posts');
+      throw new BadRequestException('You can only update your own posts');
+    }
+
+    // Validate rating updates
+    if (updatePostDto.rating !== undefined) {
+      // Check if this is a main post in a course review thread
+      if (post.parentId || post.thread.type !== DiscussionType.COURSE_REVIEW) {
+        throw new BadRequestException(
+          'Ratings are only allowed for main posts in course review threads',
+        );
+      }
     }
 
     return this.prisma.post.update({
       where: { id },
       data: {
-        ...data,
+        ...updatePostDto,
         isEdited: true,
+      },
+      include: {
+        replies: true,
+        reactions: true,
       },
     });
   }
 
-  async deletePost(id: number, authorId: string) {
-    const post = await this.prisma.post.findFirst({
-      where: { id, deletedAt: null },
+  async remove(id: string, authorId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
     });
 
     if (!post) {
-      throw new NotFoundException(`Post with ID ${id} not found`);
+      throw new NotFoundException('Post not found');
     }
 
     if (post.authorId !== authorId) {
       throw new BadRequestException('You can only delete your own posts');
     }
 
+    // Soft delete
     return this.prisma.post.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+      },
     });
   }
 }

@@ -2,68 +2,61 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Delete,
   Body,
+  Patch,
   Param,
+  Delete,
   Query,
-  ParseIntPipe,
+  ParseUUIDPipe,
+  ParseBoolPipe,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 
 @Controller('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
-  @Get('thread/:threadId')
-  async getPostsByThreadId(
-    @Param('threadId', ParseIntPipe) threadId: number,
-    @Query('parentId') parentId?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+  @Post()
+  create(
+    @Body() createPostDto: CreatePostDto,
+    @Query('authorId', ParseUUIDPipe) authorId: string,
   ) {
-    return this.postsService.getPostsByThreadId(threadId, {
-      parentId: parentId ? parseInt(parentId, 10) : undefined,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
-    });
+    return this.postsService.create(authorId, createPostDto);
+  }
+
+  @Get()
+  findAll(
+    @Query('includeDeleted', new ParseBoolPipe({ optional: true }))
+    includeDeleted = false,
+  ) {
+    return this.postsService.findAll(includeDeleted);
   }
 
   @Get(':id')
-  async getPostById(@Param('id', ParseIntPipe) id: number) {
-    return this.postsService.getPostById(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('includeDeleted', new ParseBoolPipe({ optional: true }))
+    includeDeleted = false,
+  ) {
+    return this.postsService.findOne(id, includeDeleted);
   }
 
-  @Post('thread/:threadId')
-  async createPost(
-    @Param('threadId', ParseIntPipe) threadId: number,
-    @Body()
-    data: {
-      content: string;
-      authorId: string;
-      parentId?: number;
-      rating?: number;
-    },
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updatePostDto: UpdatePostDto,
+    @Query('authorId', ParseUUIDPipe) authorId: string,
   ) {
-    return this.postsService.createPost(threadId, data);
-  }
-
-  @Put(':id')
-  async updatePost(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: { content: string; authorId: string; rating?: number },
-  ) {
-    return this.postsService.updatePost(id, data.authorId, {
-      content: data.content,
-      rating: data.rating,
-    });
+    return this.postsService.update(id, authorId, updatePostDto);
   }
 
   @Delete(':id')
-  async deletePost(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('authorId') authorId: string,
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('authorId', ParseUUIDPipe) authorId: string,
   ) {
-    return this.postsService.deletePost(id, authorId);
+    return this.postsService.remove(id, authorId);
   }
 }
