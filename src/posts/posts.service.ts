@@ -54,6 +54,20 @@ export class PostsService {
       );
     }
 
+    // Update thread overall rating
+    const threadPosts = await this.prisma.post.findMany({
+      where: { threadId: createPostDto.threadId },
+    });
+
+    const overallRating =
+      threadPosts.reduce((sum, post) => sum + (post.rating ?? 0), 0) /
+      threadPosts.length;
+
+    await this.prisma.thread.update({
+      where: { id: createPostDto.threadId },
+      data: { overallRating },
+    });
+
     return this.prisma.post.create({
       data: {
         ...createPostDto,
