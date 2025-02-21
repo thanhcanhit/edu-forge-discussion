@@ -7,7 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 @Injectable()
 export class ReactionsService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient) {}
 
   async create(createReactionDto: CreateReactionDto) {
     const post = await this.prisma.post.findUnique({
