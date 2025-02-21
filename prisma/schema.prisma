@@ -9,13 +9,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/// Type of discussion thread
 enum DiscussionType {
-  COURSE_REVIEW // Requires courseId
-  LESSON_DISCUSSION // Requires lessonId
+  COURSE_REVIEW
+  LESSON_DISCUSSION
 }
 
-/// Available reaction types (Facebook-style)
 enum ReactionType {
   LIKE // 👍
   LOVE // ❤️
@@ -28,27 +26,26 @@ enum ReactionType {
 
 /// Represents a discussion thread that can be linked to either a course or lesson
 model Thread {
-  id        String         @id @default(uuid()) @db.Uuid
-  type      DiscussionType
-  courseId  String?       @db.Uuid // Required for COURSE_REVIEW
-  lessonId  String?       @db.Uuid // Required for LESSON_DISCUSSION
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  deletedAt DateTime? // Supports soft delete
-  posts     Post[]
+  id            String         @id @default(uuid()) @db.Uuid
+  type          DiscussionType
+  resourceId    String         @db.Uuid
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime? // Supports soft delete
+  posts         Post[]
+  overallRating Float?
 
-  @@index([courseId])
-  @@index([lessonId])
+  @@index([resourceId])
 }
 
 /// Represents a post within a thread (main post, comment, or reply)
 model Post {
   id       String @id @default(uuid()) @db.Uuid
   threadId String @db.Uuid
-  thread   Thread @relation(fields: [threadId], references: [id])
+  thread   Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   parentId String? @db.Uuid
-  parent   Post?   @relation("PostReplies", fields: [parentId], references: [id])
+  parent   Post?   @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies  Post[]  @relation("PostReplies")
 
   authorId String // User ID from User Service
@@ -63,13 +60,14 @@ model Post {
 
   @@index([parentId])
   @@index([threadId])
+  @@index([authorId])
 }
 
 /// Represents a user's reaction to a post (one reaction per user per post)
 model Reaction {
   id        String       @id @default(uuid()) @db.Uuid
   postId    String       @db.Uuid
-  post      Post         @relation(fields: [postId], references: [id])
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String // User ID from User Service
   type      ReactionType
   createdAt DateTime     @default(now())

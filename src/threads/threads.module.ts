@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ThreadsController } from './threads.controller';
 import { ThreadsService } from './threads.service';
-import { PrismaClient } from '@prisma/client';
+import { ThreadsController } from './threads.controller';
 
 @Module({
   controllers: [ThreadsController],
-  providers: [ThreadsService, PrismaClient],
-  exports: [ThreadsService],
+  providers: [ThreadsService],
 })
 export class ThreadsModule {}

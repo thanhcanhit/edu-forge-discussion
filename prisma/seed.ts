@@ -1,6 +1,17 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // seed.ts
-import { PrismaClient, DiscussionType, ReactionType } from '@prisma/client';
+import {
+  PrismaClient,
+  DiscussionType,
+  ReactionType,
+  type Reaction,
+  type Post,
+  type Thread,
+} from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -69,278 +80,310 @@ const UUIDS = {
   },
 } as const;
 
-async function cleanup() {
-  // Clean up existing data in reverse order of dependencies
-  await prisma.reaction.deleteMany({});
-  await prisma.post.deleteMany({});
-  await prisma.thread.deleteMany({});
+// Interfaces for type safety
+interface SeedThreadInput {
+  threadId: string;
+  type: DiscussionType;
+  resourceId: string;
+  posts: Array<{
+    id: string;
+    authorId: string;
+    content: string;
+    rating?: number;
+    parentId?: string;
+    deletedAt?: Date;
+  }>;
+  overallRating?: number;
+}
 
-  console.log('🧹 Cleaned up existing data');
+interface SeedReactionInput {
+  id: string;
+  postId: string;
+  userId: string;
+  type: ReactionType;
+}
+
+async function cleanup() {
+  try {
+    await prisma.$transaction([
+      prisma.reaction.deleteMany(),
+      prisma.post.deleteMany(),
+      prisma.thread.deleteMany(),
+    ]);
+    console.log('🧹 Cleaned up existing data');
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+    throw error;
+  }
+}
+
+// Type-safe reaction creator
+async function createReaction(data: {
+  id: string;
+  postId: string;
+  userId: string;
+  type: ReactionType;
+}): Promise<Reaction> {
+  return await prisma.reaction.create({
+    data: {
+      id: data.id,
+      postId: data.postId,
+      userId: data.userId,
+      type: data.type,
+    },
+  });
+}
+
+async function seedThread({
+  threadId,
+  type,
+  resourceId,
+  posts,
+  overallRating,
+}: SeedThreadInput): Promise<Thread> {
+  // Tạo thread
+  const thread = await prisma.thread.create({
+    data: {
+      id: threadId,
+      type,
+      resourceId,
+      overallRating,
+    },
+  });
+
+  // Tạo tất cả bài đăng bằng createMany
+  await prisma.post.createMany({
+    data: posts.map((post) => ({
+      id: post.id,
+      threadId: thread.id,
+      authorId: post.authorId,
+      content: post.content,
+      rating: post.rating,
+      parentId: post.parentId,
+      deletedAt: post.deletedAt,
+    })),
+  });
+
+  return thread;
+}
+
+async function seedReactions(reactions: SeedReactionInput[]) {
+  await prisma.reaction.createMany({
+    data: reactions,
+  });
+}
+
+async function calculateOverallRating(
+  threadId: string,
+): Promise<number | null> {
+  const posts = await prisma.post.findMany({
+    where: {
+      threadId,
+      parentId: null, // Chỉ lấy bài đăng chính
+      deletedAt: null, // Không tính bài đã xóa
+    },
+    select: { rating: true },
+  });
+
+  const ratings = posts
+    .map((p) => p.rating)
+    .filter((r): r is number => r !== null);
+
+  return ratings.length > 0
+    ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2))
+    : null;
 }
 
 async function main() {
-  // Clean up existing data first
   await cleanup();
 
   // =========================================================
   // Thread 1: Course Review với nhiều bài đăng và chuỗi reply
   // =========================================================
-
-  // Tạo thread đánh giá khóa học
-  const courseReviewThread = await prisma.thread.create({
-    data: {
-      id: UUIDS.threads.courseReview,
-      type: DiscussionType.COURSE_REVIEW,
-      courseId: UUIDS.courses.course101,
-    },
+  const courseReviewThread = await seedThread({
+    threadId: UUIDS.threads.courseReview,
+    type: DiscussionType.COURSE_REVIEW,
+    resourceId: UUIDS.courses.course101,
+    posts: [
+      {
+        id: UUIDS.posts.post1,
+        authorId: UUIDS.users.A,
+        content: 'Khóa học tuyệt vời! Phong cách giảng dạy rất cuốn hút.',
+        rating: 5.0,
+      },
+      {
+        id: UUIDS.posts.reply1,
+        parentId: UUIDS.posts.post1,
+        authorId: UUIDS.users.B,
+        content: 'Đồng ý! Giảng viên rất nhiệt huyết và dễ hiểu.',
+      },
+      {
+        id: UUIDS.posts.reply2,
+        parentId: UUIDS.posts.post1,
+        authorId: UUIDS.users.C,
+        content: 'Phần lý thuyết hơi dài, cần thêm ví dụ thực tế.',
+      },
+      {
+        id: UUIDS.posts.nestedReply,
+        parentId: UUIDS.posts.reply2,
+        authorId: UUIDS.users.A,
+        content: 'Cảm ơn góp ý, mình sẽ chuyển đến ban tổ chức.',
+      },
+      {
+        id: UUIDS.posts.post2,
+        authorId: UUIDS.users.D,
+        content: 'Khóa học hay nhưng tài liệu cần cập nhật thêm.',
+        rating: 4.5,
+      },
+      {
+        id: UUIDS.posts.softDeletedPost,
+        authorId: UUIDS.users.P,
+        content: 'Bài đăng này sẽ được soft delete.',
+        rating: 3.0,
+        deletedAt: new Date(),
+      },
+    ],
   });
 
-  // Tạo bài đăng chính có rating
-  const post1 = await prisma.post.create({
-    data: {
-      id: UUIDS.posts.post1,
-      threadId: courseReviewThread.id,
-      authorId: UUIDS.users.A,
-      content:
-        'Khóa học tuyệt vời! Tôi rất thích phong cách giảng dạy của giảng viên.',
-      rating: 5,
-    },
-  });
+  // Cập nhật overallRating cho Thread 1
+  const overallRating1 = await calculateOverallRating(courseReviewThread.id);
+  if (overallRating1 !== null) {
+    await prisma.thread.update({
+      where: { id: courseReviewThread.id },
+      data: { overallRating: overallRating1 },
+    });
+  }
 
-  // Tạo reply cho bài đăng chính
-  await prisma.post.create({
-    data: {
-      id: UUIDS.posts.reply1,
-      threadId: courseReviewThread.id,
-      parentId: post1.id,
-      authorId: UUIDS.users.B,
-      content: 'Đồng ý! Giảng viên rất nhiệt huyết và dễ hiểu.',
-    },
-  });
-
-  // Tạo reply thứ hai cho bài đăng chính
-  const reply2 = await prisma.post.create({
-    data: {
-      id: UUIDS.posts.reply2,
-      threadId: courseReviewThread.id,
-      parentId: post1.id,
-      authorId: UUIDS.users.C,
-      content: 'Mình thấy phần lý thuyết hơi dài, cần thêm ví dụ thực tế.',
-    },
-  });
-
-  // Tạo nested reply cho reply2
-  await prisma.post.create({
-    data: {
-      id: UUIDS.posts.nestedReply,
-      threadId: courseReviewThread.id,
-      parentId: reply2.id,
-      authorId: UUIDS.users.A,
-      content: 'Cảm ơn góp ý, mình sẽ chuyển đến ban tổ chức.',
-    },
-  });
-
-  // Tạo bài đăng thứ 2 (không reply)
-  await prisma.post.create({
-    data: {
-      id: UUIDS.posts.post2,
-      threadId: courseReviewThread.id,
-      authorId: UUIDS.users.D,
-      content: 'Khóa học hay nhưng tài liệu cần cập nhật thêm.',
-      rating: 4,
-    },
+  // =========================================================
+  // Thread 2: Lesson Discussion với chuỗi reply
+  // =========================================================
+  await seedThread({
+    threadId: UUIDS.threads.lessonDiscussion,
+    type: DiscussionType.LESSON_DISCUSSION,
+    resourceId: UUIDS.lessons.lesson202,
+    posts: [
+      {
+        id: UUIDS.posts.lessonPost1,
+        authorId: UUIDS.users.E,
+        content:
+          'Bài học này khó hiểu, đặc biệt phần đệ quy. Ai giải thích thêm không?',
+      },
+      {
+        id: UUIDS.posts.lessonReply1,
+        parentId: UUIDS.posts.lessonPost1,
+        authorId: UUIDS.users.F,
+        content: 'Thử hình dung đệ quy như vòng lặp, mỗi lần gọi chính nó.',
+      },
+      {
+        id: UUIDS.posts.lessonNestedReply,
+        parentId: UUIDS.posts.lessonReply1,
+        authorId: UUIDS.users.G,
+        content: 'Ý kiến hay, mình học theo cách đó và thấy hiệu quả.',
+      },
+      {
+        id: UUIDS.posts.lessonReply2,
+        parentId: UUIDS.posts.lessonPost1,
+        authorId: UUIDS.users.H,
+        content: 'Mình có video giải thích chi tiết, các bạn tham khảo nhé!',
+      },
+    ],
   });
 
   // =========================================================
-  // Thread 2: Lesson Discussion với chuỗi reply kéo dài
+  // Thread 3: Course Review với một bài đăng
   // =========================================================
-
-  const lessonDiscussionThread = await prisma.thread.create({
-    data: {
-      id: UUIDS.threads.lessonDiscussion,
-      type: DiscussionType.LESSON_DISCUSSION,
-      lessonId: UUIDS.lessons.lesson202,
-    },
-  });
-
-  // Tạo bài đăng chính cho bài học
-  const lessonPost1 = await prisma.post.create({
-    data: {
-      id: UUIDS.posts.lessonPost1,
-      threadId: lessonDiscussionThread.id,
-      authorId: UUIDS.users.E,
-      content:
-        'Bài học này khá khó hiểu, đặc biệt phần đệ quy. Có ai giải thích thêm không?',
-    },
-  });
-
-  // Tạo reply cho bài đăng chính
-  const lessonReply1 = await prisma.post.create({
-    data: {
-      id: UUIDS.posts.lessonReply1,
-      threadId: lessonDiscussionThread.id,
-      parentId: lessonPost1.id,
-      authorId: UUIDS.users.F,
-      content: 'Thử hình dung đệ quy như là vòng lặp, mỗi lần gọi chính nó.',
-    },
-  });
-
-  // Tạo nested reply cho lessonReply1
-  await prisma.post.create({
-    data: {
-      id: UUIDS.posts.lessonNestedReply,
-      threadId: lessonDiscussionThread.id,
-      parentId: lessonReply1.id,
-      authorId: UUIDS.users.G,
-      content: 'Ý kiến hay, mình cũng đã học theo cách đó và thấy hiệu quả.',
-    },
-  });
-
-  // Tạo thêm reply cho bài đăng chính
-  await prisma.post.create({
-    data: {
-      id: UUIDS.posts.lessonReply2,
-      threadId: lessonDiscussionThread.id,
-      parentId: lessonPost1.id,
-      authorId: UUIDS.users.H,
-      content:
-        'Mình có một video giải thích rất chi tiết, các bạn có thể tham khảo!',
-    },
-  });
-
-  // =========================================================
-  // Thread 3: Course Review với một bài đăng đơn giản (không reply)
-  // =========================================================
-
-  const singlePostCourseReviewThread = await prisma.thread.create({
-    data: {
-      id: UUIDS.threads.singlePostReview,
-      type: DiscussionType.COURSE_REVIEW,
-      courseId: UUIDS.courses.course303,
-    },
-  });
-
-  await prisma.post.create({
-    data: {
-      id: UUIDS.posts.singlePost,
-      threadId: singlePostCourseReviewThread.id,
-      authorId: UUIDS.users.I,
-      content:
-        'Tôi không thích khóa học này vì quá lý thuyết và thiếu thực hành.',
-      rating: 2,
-    },
+  const singlePostReviewThread = await seedThread({
+    threadId: UUIDS.threads.singlePostReview,
+    type: DiscussionType.COURSE_REVIEW,
+    resourceId: UUIDS.courses.course303,
+    posts: [
+      {
+        id: UUIDS.posts.singlePost,
+        authorId: UUIDS.users.I,
+        content: 'Khóa học quá lý thuyết, thiếu thực hành.',
+        rating: 2.0,
+      },
+    ],
+    overallRating: 2.0, // Chỉ có một bài đánh giá nên overallRating = rating
   });
 
   // =========================================================
   // Thread 4: Lesson Discussion với nhiều bài đăng độc lập
   // =========================================================
-
-  const multiplePostsLessonDiscussionThread = await prisma.thread.create({
-    data: {
-      id: UUIDS.threads.multiplePostsDiscussion,
-      type: DiscussionType.LESSON_DISCUSSION,
-      lessonId: UUIDS.lessons.lesson404,
-    },
-  });
-
-  const lessonPost2 = await prisma.post.create({
-    data: {
-      id: UUIDS.posts.lessonPost2,
-      threadId: multiplePostsLessonDiscussionThread.id,
-      authorId: UUIDS.users.J,
-      content: 'Bài học này rất rõ ràng, mình hiểu ngay lập tức.',
-    },
-  });
-
-  const lessonPost3 = await prisma.post.create({
-    data: {
-      id: UUIDS.posts.lessonPost3,
-      threadId: multiplePostsLessonDiscussionThread.id,
-      authorId: UUIDS.users.K,
-      content:
-        'Mình có chút băn khoăn ở phần kết thúc, ai có thể giải thích thêm không?',
-    },
+  await seedThread({
+    threadId: UUIDS.threads.multiplePostsDiscussion,
+    type: DiscussionType.LESSON_DISCUSSION,
+    resourceId: UUIDS.lessons.lesson404,
+    posts: [
+      {
+        id: UUIDS.posts.lessonPost2,
+        authorId: UUIDS.users.J,
+        content: 'Bài học này rất rõ ràng, mình hiểu ngay lập tức.',
+      },
+      {
+        id: UUIDS.posts.lessonPost3,
+        authorId: UUIDS.users.K,
+        content: 'Mình băn khoăn phần kết thúc, ai giải thích thêm không?',
+      },
+    ],
   });
 
   // =========================================================
-  // Tạo Reaction cho các bài đăng
+  // Seed phản ứng
   // =========================================================
-
-  // Reactions cho bài đăng chính của Thread 1
-  await prisma.reaction.create({
-    data: {
+  await seedReactions([
+    {
       id: UUIDS.reactions.like1,
-      postId: post1.id,
+      postId: UUIDS.posts.post1,
       userId: UUIDS.users.L,
       type: ReactionType.LIKE,
     },
-  });
-  await prisma.reaction.create({
-    data: {
+    {
       id: UUIDS.reactions.love1,
-      postId: post1.id,
+      postId: UUIDS.posts.post1,
       userId: UUIDS.users.M,
       type: ReactionType.LOVE,
     },
-  });
-  await prisma.reaction.create({
-    data: {
+    {
       id: UUIDS.reactions.care1,
-      postId: post1.id,
+      postId: UUIDS.posts.post1,
       userId: UUIDS.users.N,
       type: ReactionType.CARE,
     },
-  });
-
-  // Reaction cho bài đăng chính của Thread 2
-  await prisma.reaction.create({
-    data: {
+    {
       id: UUIDS.reactions.wow1,
-      postId: lessonPost1.id,
+      postId: UUIDS.posts.lessonPost1,
       userId: UUIDS.users.O,
       type: ReactionType.WOW,
     },
-  });
-
-  // Reactions cho từng bài đăng của Thread 4
-  await prisma.reaction.create({
-    data: {
+    {
       id: UUIDS.reactions.like2,
-      postId: lessonPost2.id,
+      postId: UUIDS.posts.lessonPost2,
       userId: UUIDS.users.J,
       type: ReactionType.LIKE,
     },
-  });
-  await prisma.reaction.create({
-    data: {
+    {
       id: UUIDS.reactions.haha1,
-      postId: lessonPost3.id,
+      postId: UUIDS.posts.lessonPost3,
       userId: UUIDS.users.K,
       type: ReactionType.HAHA,
     },
-  });
+  ]);
 
-  // =========================================================
-  // Ví dụ về soft delete: tạo một post rồi soft delete
-  // =========================================================
-
-  await prisma.post.create({
-    data: {
-      id: UUIDS.posts.softDeletedPost,
-      threadId: courseReviewThread.id,
-      authorId: UUIDS.users.P,
-      content: 'Bài đăng này sẽ được soft delete.',
-      rating: 3,
-      deletedAt: new Date(), // Soft delete ngay khi tạo
-    },
-  });
-
-  console.log('✅ Đã tạo dữ liệu mẫu đa dạng cho microservice thành công!');
-  // Log một số UUID để tham khảo sau này
-  console.log('🔑 Sample UUIDs for reference:');
-  console.log('Thread 1:', UUIDS.threads.courseReview);
-  console.log('Post 1:', UUIDS.posts.post1);
-  console.log('User A:', UUIDS.users.A);
+  console.log('✅ Đã tạo dữ liệu mẫu thành công!');
+  console.log('🔑 Thông tin chính:');
+  console.log(
+    `- Thread 1 (Course Review): ID=${courseReviewThread.id}, Overall Rating=${overallRating1}`,
+  );
+  console.log(
+    `- Thread 2 (Lesson Discussion): ID=${UUIDS.threads.lessonDiscussion}`,
+  );
+  console.log(
+    `- Thread 3 (Single Post Review): ID=${singlePostReviewThread.id}, Overall Rating=2.0`,
+  );
+  console.log(
+    `- Thread 4 (Multiple Posts Discussion): ID=${UUIDS.threads.multiplePostsDiscussion}`,
+  );
 }
 
 main()
@@ -348,7 +391,6 @@ main()
     console.error('❌ Lỗi khi seed dữ liệu:', e);
     process.exit(1);
   })
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  .finally(async () => {
-    await prisma.$disconnect();
+  .finally(() => {
+    void prisma.$disconnect();
   });
