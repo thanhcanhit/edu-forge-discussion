@@ -6,10 +6,14 @@ import {
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { DiscussionType, PrismaClient } from '@prisma/client';
+import { ThreadsGateway } from 'src/threads/threads.gateway';
 
 @Injectable()
 export class PostsService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private threadGateway: ThreadsGateway,
+  ) {}
 
   async create(authorId: string, createPostDto: CreatePostDto) {
     // Validate thread exists and get its type
@@ -68,7 +72,7 @@ export class PostsService {
       data: { overallRating },
     });
 
-    return this.prisma.post.create({
+    const result = await this.prisma.post.create({
       data: {
         ...createPostDto,
         authorId,
@@ -78,6 +82,11 @@ export class PostsService {
         reactions: true,
       },
     });
+
+    // Notify thread participants
+    this.threadGateway.sendNewPostToThread(createPostDto.threadId, result);
+
+    return result;
   }
 
   async findAll(includeDeleted = false) {
