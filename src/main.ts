@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api/v1');
 
   // Enable CORS
   app.enableCors({
@@ -15,16 +16,18 @@ async function bootstrap() {
     credentials: false,
   });
 
+  // Swagger
   const config = new DocumentBuilder()
-    .setTitle('Edu Forge Discussion API')
-    .setDescription('The discussion API description')
+    .setTitle('Edu Forge Discussion Service API')
+    .setDescription(
+      'The discussion service API description, it have 2 endpoints: /threads, /posts and /reactions',
+    )
     .setVersion('1.0')
     .addTag('discussion')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1/docs', app, documentFactory);
 
-  app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
