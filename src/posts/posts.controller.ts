@@ -26,14 +26,6 @@ export class PostsController {
     return this.postsService.create(authorId, createPostDto);
   }
 
-  @Get()
-  findAll(
-    @Query('includeDeleted', new ParseBoolPipe({ optional: true }))
-    includeDeleted = false,
-  ) {
-    return this.postsService.findAll(includeDeleted);
-  }
-
   @Get(':id')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,

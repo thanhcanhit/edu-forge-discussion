@@ -27,6 +27,19 @@ export class ThreadsService {
   async findOne(id: string): Promise<Thread> {
     const thread = await this.prisma.thread.findUnique({
       where: { id },
+      include: {
+        _count: {
+          select: {
+            posts: true,
+          },
+        },
+        posts: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 5,
+        },
+      },
     });
 
     if (!thread || thread.deletedAt) {
@@ -56,8 +69,12 @@ export class ThreadsService {
     });
   }
 
-  async findThreadPosts(threadId: string) {
+  async findThreadPosts(threadId: string, page = 1, limit = 10) {
     const thread = await this.findOne(threadId);
+
+    if (!thread) {
+      throw new NotFoundException(`Thread with ID ${threadId} not found`);
+    }
 
     return this.prisma.post.findMany({
       where: {
@@ -65,16 +82,21 @@ export class ThreadsService {
         deletedAt: null,
         parentId: null, // Get only top-level posts
       },
+      take: limit,
+      skip: (page - 1) * limit,
       include: {
-        replies: {
-          where: {
-            deletedAt: null,
-          },
-          include: {
-            reactions: true,
+        _count: {
+          select: {
+            replies: true,
           },
         },
-        reactions: true,
+        reactions: {
+          omit: {
+            userId: true,
+            type: true,
+            id: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
