@@ -9,6 +9,8 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ThreadsService } from './threads.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
@@ -36,8 +38,12 @@ export class ThreadsController {
   }
 
   @Get(':id/posts')
-  findThreadPosts(@Param('id', ParseUUIDPipe) id: string) {
-    return this.threadsService.findThreadPosts(id);
+  findThreadPosts(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('page', ParseIntPipe) page?: number,
+    @Query('limit', ParseIntPipe) limit?: number,
+  ) {
+    return this.threadsService.findThreadPosts(id, page, limit);
   }
 
   @Put(':id')

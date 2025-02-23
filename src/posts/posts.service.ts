@@ -89,16 +89,6 @@ export class PostsService {
     return result;
   }
 
-  async findAll(includeDeleted = false) {
-    return this.prisma.post.findMany({
-      where: includeDeleted ? {} : { deletedAt: null },
-      include: {
-        replies: true,
-        reactions: true,
-      },
-    });
-  }
-
   async findOne(id: string, includeDeleted = false) {
     const post = await this.prisma.post.findUnique({
       where: { id },
@@ -175,6 +165,18 @@ export class PostsService {
       where: { id },
       data: {
         deletedAt: new Date(),
+      },
+    });
+  }
+
+  async findReplies(id: string, page = 1, limit = 10) {
+    return this.prisma.post.findMany({
+      where: { parentId: id },
+      take: limit,
+      skip: (page - 1) * limit,
+      include: {
+        replies: true,
+        reactions: true,
       },
     });
   }
