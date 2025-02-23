@@ -38,6 +38,13 @@ export class ThreadsService {
             createdAt: 'desc',
           },
           take: 5,
+          include: {
+            _count: {
+              select: {
+                replies: true,
+              },
+            },
+          },
         },
       },
     });

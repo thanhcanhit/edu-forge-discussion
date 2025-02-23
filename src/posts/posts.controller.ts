@@ -9,6 +9,7 @@ import {
   Query,
   ParseUUIDPipe,
   ParseBoolPipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -24,6 +25,15 @@ export class PostsController {
     @Query('authorId', ParseUUIDPipe) authorId: string,
   ) {
     return this.postsService.create(authorId, createPostDto);
+  }
+
+  @Get(':id/replies')
+  findReplies(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('page', ParseIntPipe) page?: number,
+    @Query('limit', ParseIntPipe) limit?: number,
+  ) {
+    return this.postsService.findReplies(id, page, limit);
   }
 
   @Get(':id')

@@ -168,4 +168,16 @@ export class PostsService {
       },
     });
   }
+
+  async findReplies(id: string, page = 1, limit = 10) {
+    return this.prisma.post.findMany({
+      where: { parentId: id },
+      take: limit,
+      skip: (page - 1) * limit,
+      include: {
+        replies: true,
+        reactions: true,
+      },
+    });
+  }
 }
