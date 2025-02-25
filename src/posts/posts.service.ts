@@ -5,8 +5,17 @@ import {
 } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { DiscussionType, PrismaClient } from '@prisma/client';
+import {
+  DiscussionType,
+  PrismaClient,
+  ReactionType,
+  Reaction,
+} from '@prisma/client';
 import { ThreadsGateway } from 'src/threads/threads.gateway';
+import {
+  PostWithTotalReplies,
+  ReactionCounts,
+} from './interfaces/post.interface';
 
 @Injectable()
 export class PostsService {
@@ -89,7 +98,10 @@ export class PostsService {
     return result;
   }
 
-  async findOne(id: string, includeDeleted = false) {
+  async findOne(
+    id: string,
+    includeDeleted = false,
+  ): Promise<PostWithTotalReplies> {
     const post = await this.prisma.post.findUnique({
       where: { id },
       include: {
@@ -107,7 +119,98 @@ export class PostsService {
       throw new NotFoundException('Post not found');
     }
 
-    return post;
+    // Calculate total replies count for the main post
+    const totalRepliesCount = await this.countAllNestedReplies(post.id);
+    // Add reaction counts for the main post
+    const reactionCounts = this.countReactionsByType(post.reactions);
+
+    // Add total replies count to the post
+    const postWithTotalReplies = {
+      ...post,
+      totalRepliesCount,
+      reactionCounts,
+      // Also add total replies count to each direct reply
+      replies: await Promise.all(
+        (post.replies || []).map(async (reply) => {
+          const replyTotalCount = await this.countAllNestedReplies(reply.id);
+          // Add reaction counts for each reply
+          const replyReactionCounts = this.countReactionsByType(
+            reply.reactions,
+          );
+          return {
+            ...reply,
+            totalRepliesCount: replyTotalCount,
+            reactionCounts: replyReactionCounts,
+          } as PostWithTotalReplies;
+        }),
+      ),
+    } as PostWithTotalReplies;
+
+    return postWithTotalReplies;
+  }
+
+  /**
+   * Counts reactions by their type for a post
+   * @param reactions Array of reactions for a post
+   * @returns Object with counts for each reaction type
+   */
+  private countReactionsByType(reactions: Reaction[]): ReactionCounts {
+    // Initialize counts with zeros for all reaction types
+    const counts: ReactionCounts = {
+      [ReactionType.LIKE]: 0,
+      [ReactionType.LOVE]: 0,
+      [ReactionType.CARE]: 0,
+      [ReactionType.HAHA]: 0,
+      [ReactionType.WOW]: 0,
+      [ReactionType.SAD]: 0,
+      [ReactionType.ANGRY]: 0,
+      total: 0,
+    };
+
+    // Count reactions by type
+    if (reactions && reactions.length > 0) {
+      reactions.forEach((reaction) => {
+        const reactionType = reaction.type;
+        if (reactionType && counts[reactionType] !== undefined) {
+          counts[reactionType]++;
+          counts.total++;
+        }
+      });
+    }
+
+    return counts;
+  }
+
+  /**
+   * Recursively counts all nested replies for a post
+   * @param postId The ID of the post to count replies for
+   * @returns The total count of all nested replies
+   */
+  private async countAllNestedReplies(postId: string): Promise<number> {
+    // Get direct replies to this post
+    const directReplies = await this.prisma.post.findMany({
+      where: {
+        parentId: postId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (directReplies.length === 0) {
+      return 0;
+    }
+
+    let totalCount = directReplies.length;
+
+    // Recursively count replies to each direct reply
+    for (const reply of directReplies) {
+      const nestedCount = await this.countAllNestedReplies(reply.id);
+      totalCount += nestedCount;
+    }
+
+    return totalCount;
   }
 
   async update(id: string, authorId: string, updatePostDto: UpdatePostDto) {
@@ -134,7 +237,7 @@ export class PostsService {
       }
     }
 
-    return this.prisma.post.update({
+    const updatedPost = await this.prisma.post.update({
       where: { id },
       data: {
         ...updatePostDto,
@@ -145,6 +248,17 @@ export class PostsService {
         reactions: true,
       },
     });
+
+    // Add total replies count
+    const totalRepliesCount = await this.countAllNestedReplies(updatedPost.id);
+    // Add reaction counts
+    const reactionCounts = this.countReactionsByType(updatedPost.reactions);
+
+    return {
+      ...updatedPost,
+      totalRepliesCount,
+      reactionCounts,
+    } as PostWithTotalReplies;
   }
 
   async remove(id: string, authorId: string) {
@@ -169,15 +283,41 @@ export class PostsService {
     });
   }
 
-  async findReplies(id: string, page = 1, limit = 10) {
-    return this.prisma.post.findMany({
-      where: { parentId: id },
+  async findReplies(
+    id: string,
+    page = 1,
+    limit = 10,
+  ): Promise<PostWithTotalReplies[]> {
+    const replies = await this.prisma.post.findMany({
+      where: {
+        parentId: id,
+        deletedAt: null,
+      },
       take: limit,
       skip: (page - 1) * limit,
       include: {
         replies: true,
         reactions: true,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
+
+    // Add total replies count to each reply
+    const repliesWithTotalCounts = await Promise.all(
+      replies.map(async (reply) => {
+        const totalRepliesCount = await this.countAllNestedReplies(reply.id);
+        // Add reaction counts
+        const reactionCounts = this.countReactionsByType(reply.reactions);
+        return {
+          ...reply,
+          totalRepliesCount,
+          reactionCounts,
+        } as PostWithTotalReplies;
+      }),
+    );
+
+    return repliesWithTotalCounts;
   }
 }

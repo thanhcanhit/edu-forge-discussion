@@ -14,6 +14,7 @@ import {
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { PostWithTotalReplies } from './interfaces/post.interface';
 
 @Controller('posts')
 export class PostsController {
@@ -32,7 +33,7 @@ export class PostsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query('page', ParseIntPipe) page?: number,
     @Query('limit', ParseIntPipe) limit?: number,
-  ) {
+  ): Promise<PostWithTotalReplies[]> {
     return this.postsService.findReplies(id, page, limit);
   }
 
@@ -41,7 +42,7 @@ export class PostsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query('includeDeleted', new ParseBoolPipe({ optional: true }))
     includeDeleted = false,
-  ) {
+  ): Promise<PostWithTotalReplies> {
     return this.postsService.findOne(id, includeDeleted);
   }
 
@@ -50,7 +51,7 @@ export class PostsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePostDto: UpdatePostDto,
     @Query('authorId', ParseUUIDPipe) authorId: string,
-  ) {
+  ): Promise<PostWithTotalReplies> {
     return this.postsService.update(id, authorId, updatePostDto);
   }
 
