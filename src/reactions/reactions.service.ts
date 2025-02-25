@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ReactionType } from '@prisma/client';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 @Injectable()
 export class ReactionsService {
@@ -31,6 +31,13 @@ export class ReactionsService {
 
     return this.prisma.reaction.create({
       data: createReactionDto,
+    });
+  }
+
+  async update(reactionId: string, reactionType: ReactionType) {
+    return this.prisma.reaction.update({
+      where: { id: reactionId },
+      data: { type: reactionType },
     });
   }
 

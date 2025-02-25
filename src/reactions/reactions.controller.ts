@@ -1,6 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ReactionsService } from './reactions.service';
 import { CreateReactionDto } from './dto/create-reaction.dto';
+import { ReactionType } from '@prisma/client';
 
 @Controller('reactions')
 export class ReactionsController {
@@ -19,6 +28,14 @@ export class ReactionsController {
   @Get('post/:id')
   findByPostId(@Param('id') id: string) {
     return this.reactionsService.findByPostId(id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Param('reactionType') reactionType: ReactionType,
+  ) {
+    return this.reactionsService.update(id, reactionType);
   }
 
   @Delete(':id')

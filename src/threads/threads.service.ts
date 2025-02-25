@@ -44,6 +44,10 @@ export class ThreadsService {
           },
         },
         posts: {
+          where: {
+            deletedAt: null,
+            parentId: null,
+          },
           orderBy: {
             createdAt: 'desc',
           },
