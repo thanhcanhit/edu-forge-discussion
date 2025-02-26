@@ -103,7 +103,7 @@ export class PostsService {
     includeDeleted = false,
   ): Promise<PostWithTotalReplies> {
     const post = await this.prisma.post.findUnique({
-      where: { id },
+      where: { id, deletedAt: includeDeleted ? undefined : null },
       include: {
         replies: {
           include: {

@@ -35,6 +35,16 @@ export class ReactionsService {
   }
 
   async update(reactionId: string, reactionType: ReactionType) {
+    const reaction = await this.prisma.reaction.findUnique({
+      where: { id: reactionId },
+    });
+
+    if (!reaction) {
+      throw new NotFoundException('Reaction not found');
+    }
+
+    console.log('REACTION:', reaction);
+
     return this.prisma.reaction.update({
       where: { id: reactionId },
       data: { type: reactionType },

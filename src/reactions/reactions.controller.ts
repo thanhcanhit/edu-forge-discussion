@@ -31,11 +31,8 @@ export class ReactionsController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Param('reactionType') reactionType: ReactionType,
-  ) {
-    return this.reactionsService.update(id, reactionType);
+  update(@Param('id') id: string, @Body('type') type: ReactionType) {
+    return this.reactionsService.update(id, type);
   }
 
   @Delete(':id')
