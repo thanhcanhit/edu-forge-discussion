@@ -43,8 +43,6 @@ export class ReactionsService {
       throw new NotFoundException('Reaction not found');
     }
 
-    console.log('REACTION:', reaction);
-
     return this.prisma.reaction.update({
       where: { id: reactionId },
       data: { type: reactionType },
