@@ -1,12 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { UpdateThreadDto } from './dto/update-thread.dto';
-import { PrismaClient, Thread, ReactionType, Reaction } from '@prisma/client';
+import {
+  PrismaClient,
+  Thread,
+  ReactionType,
+  Reaction,
+  Post,
+} from '@prisma/client';
 import { ThreadWithPosts } from './interfaces/thread.interface';
 import {
   PostWithTotalReplies,
   ReactionCounts,
 } from '../posts/interfaces/post.interface';
+
+type PostWithReplies = Post & {
+  _count: {
+    replies: number;
+  };
+  replies: PostWithReplies[];
+};
 
 @Injectable()
 export class ThreadsService {
@@ -126,28 +139,70 @@ export class ThreadsService {
    * @returns The total count of all nested replies
    */
   private async countAllNestedReplies(postId: string): Promise<number> {
-    // Get direct replies to this post
-    const directReplies = await this.prisma.post.findMany({
-      where: {
-        parentId: postId,
-        deletedAt: null,
+    const post = (await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        _count: {
+          select: {
+            replies: {
+              where: {
+                deletedAt: null,
+              },
+            },
+          },
+        },
+        replies: {
+          where: {
+            deletedAt: null,
+          },
+          include: {
+            _count: {
+              select: {
+                replies: {
+                  where: {
+                    deletedAt: null,
+                  },
+                },
+              },
+            },
+            replies: {
+              where: {
+                deletedAt: null,
+              },
+              include: {
+                _count: {
+                  select: {
+                    replies: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
-      select: {
-        id: true,
-      },
-    });
+    })) as PostWithReplies | null;
 
-    if (directReplies.length === 0) {
-      return 0;
-    }
+    if (!post) return 0;
 
-    let totalCount = directReplies.length;
+    let totalCount = 0;
 
-    // Recursively count replies to each direct reply
-    for (const reply of directReplies) {
-      const nestedCount = await this.countAllNestedReplies(reply.id);
-      totalCount += nestedCount;
-    }
+    // Count direct replies
+    totalCount += post._count.replies;
+
+    // Count nested replies recursively
+    const countNestedReplies = (replies: PostWithReplies[]): number => {
+      let count = 0;
+      for (const reply of replies) {
+        count += reply._count.replies;
+        if (reply.replies?.length > 0) {
+          count += countNestedReplies(reply.replies);
+        }
+      }
+      return count;
+    };
+
+    // Add counts from all nested levels
+    totalCount += countNestedReplies(post.replies);
 
     return totalCount;
   }

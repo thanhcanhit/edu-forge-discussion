@@ -10,12 +10,20 @@ import {
   PrismaClient,
   ReactionType,
   Reaction,
+  Post,
 } from '@prisma/client';
 import { ThreadsGateway } from 'src/threads/threads.gateway';
 import {
   PostWithTotalReplies,
   ReactionCounts,
 } from './interfaces/post.interface';
+
+type PostWithReplies = Post & {
+  _count: {
+    replies: number;
+  };
+  replies: PostWithReplies[];
+};
 
 @Injectable()
 export class PostsService {
@@ -124,7 +132,7 @@ export class PostsService {
     // Add reaction counts for the main post
     const reactionCounts = this.countReactionsByType(post.reactions);
 
-    // Add total replies count to the post
+    // Add total replies count to each direct reply
     const postWithTotalReplies = {
       ...post,
       totalRepliesCount,
@@ -187,28 +195,70 @@ export class PostsService {
    * @returns The total count of all nested replies
    */
   private async countAllNestedReplies(postId: string): Promise<number> {
-    // Get direct replies to this post
-    const directReplies = await this.prisma.post.findMany({
-      where: {
-        parentId: postId,
-        deletedAt: null,
+    const post = (await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        _count: {
+          select: {
+            replies: {
+              where: {
+                deletedAt: null,
+              },
+            },
+          },
+        },
+        replies: {
+          where: {
+            deletedAt: null,
+          },
+          include: {
+            _count: {
+              select: {
+                replies: {
+                  where: {
+                    deletedAt: null,
+                  },
+                },
+              },
+            },
+            replies: {
+              where: {
+                deletedAt: null,
+              },
+              include: {
+                _count: {
+                  select: {
+                    replies: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
-      select: {
-        id: true,
-      },
-    });
+    })) as PostWithReplies | null;
 
-    if (directReplies.length === 0) {
-      return 0;
-    }
+    if (!post) return 0;
 
-    let totalCount = directReplies.length;
+    let totalCount = 0;
 
-    // Recursively count replies to each direct reply
-    for (const reply of directReplies) {
-      const nestedCount = await this.countAllNestedReplies(reply.id);
-      totalCount += nestedCount;
-    }
+    // Count direct replies
+    totalCount += post._count.replies;
+
+    // Count nested replies recursively
+    const countNestedReplies = (replies: PostWithReplies[]): number => {
+      let count = 0;
+      for (const reply of replies) {
+        count += reply._count.replies;
+        if (reply.replies?.length > 0) {
+          count += countNestedReplies(reply.replies);
+        }
+      }
+      return count;
+    };
+
+    // Add counts from all nested levels
+    totalCount += countNestedReplies(post.replies);
 
     return totalCount;
   }
@@ -274,13 +324,44 @@ export class PostsService {
       throw new BadRequestException('You can only delete your own posts');
     }
 
-    // Soft delete
-    return this.prisma.post.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-      },
-    });
+    const now = new Date();
+
+    // Soft delete the post and all its nested replies
+    await this.prisma.$transaction([
+      // Soft delete all nested replies at any depth
+      this.prisma.post.updateMany({
+        where: {
+          OR: [
+            { parentId: id }, // Direct replies
+            {
+              parent: {
+                parentId: id, // Replies of replies
+              },
+            },
+            {
+              parent: {
+                parent: {
+                  parentId: id, // Replies of replies of replies
+                },
+              },
+            },
+          ],
+          deletedAt: null, // Only update non-deleted posts
+        },
+        data: {
+          deletedAt: now,
+        },
+      }),
+      // Soft delete the main post
+      this.prisma.post.update({
+        where: { id },
+        data: {
+          deletedAt: now,
+        },
+      }),
+    ]);
+
+    return { success: true };
   }
 
   async findReplies(
@@ -319,5 +400,42 @@ export class PostsService {
     );
 
     return repliesWithTotalCounts;
+  }
+
+  async hasUserReviewedCourse(
+    courseId: string,
+    authorId: string,
+  ): Promise<{ hasReviewed: boolean; reviewId?: string }> {
+    // Find thread for this course
+    const thread = await this.prisma.thread.findFirst({
+      where: {
+        resourceId: courseId,
+        type: DiscussionType.COURSE_REVIEW,
+        deletedAt: null,
+      },
+    });
+
+    if (!thread) {
+      return { hasReviewed: false };
+    }
+
+    // Check if user has a review post in this thread
+    const review = await this.prisma.post.findFirst({
+      where: {
+        threadId: thread.id,
+        authorId: authorId,
+        parentId: null, // Only main posts can be reviews
+        rating: { not: null }, // Must have a rating to be a review
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return {
+      hasReviewed: !!review,
+      reviewId: review?.id,
+    };
   }
 }

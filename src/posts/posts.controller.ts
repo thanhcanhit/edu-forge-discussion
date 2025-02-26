@@ -20,6 +20,14 @@ import { PostWithTotalReplies } from './interfaces/post.interface';
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
+  @Get('check-review')
+  hasUserReviewedCourse(
+    @Query('courseId', ParseUUIDPipe) courseId: string,
+    @Query('authorId', ParseUUIDPipe) authorId: string,
+  ): Promise<{ hasReviewed: boolean; reviewId?: string }> {
+    return this.postsService.hasUserReviewedCourse(courseId, authorId);
+  }
+
   @Post()
   create(
     @Body() createPostDto: CreatePostDto,
