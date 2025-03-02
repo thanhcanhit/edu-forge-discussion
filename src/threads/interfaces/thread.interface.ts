@@ -10,3 +10,10 @@ export interface ThreadWithPosts extends Thread {
     posts: number;
   };
 }
+
+export interface ThreadUser {
+  userId: string;
+  userName: string;
+  socketId: string;
+  lastActivity: Date;
+}

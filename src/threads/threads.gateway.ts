@@ -9,14 +9,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ThreadsService } from './threads.service';
-import { Post } from '@prisma/client';
-
-interface ThreadUser {
-  userId: string;
-  userName: string;
-  socketId: string;
-  lastActivity: Date;
-}
+import { Post, Reaction } from '@prisma/client';
+import { ThreadUser } from './interfaces/thread.interface';
 
 @Injectable()
 @WebSocketGateway({
@@ -232,5 +226,24 @@ export class ThreadsGateway implements OnGatewayInit {
 
   sendDeletedPostToThread(threadId: string, postId: string): void {
     this.server.to(`thread-${threadId}`).emit('delete-post', { postId });
+  }
+
+  // Reaction update methods
+  sendNewReactionToPost(threadId: string, reaction: Reaction): void {
+    this.server.to(`thread-${threadId}`).emit('new-reaction', reaction);
+  }
+
+  sendUpdatedReactionToPost(threadId: string, reaction: Reaction): void {
+    this.server.to(`thread-${threadId}`).emit('update-reaction', reaction);
+  }
+
+  sendDeletedReactionFromPost(
+    threadId: string,
+    reactionId: string,
+    postId: string,
+  ): void {
+    this.server
+      .to(`thread-${threadId}`)
+      .emit('delete-reaction', { reactionId, postId });
   }
 }

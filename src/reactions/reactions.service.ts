@@ -5,13 +5,19 @@ import {
 } from '@nestjs/common';
 import { PrismaClient, ReactionType } from '@prisma/client';
 import { CreateReactionDto } from './dto/create-reaction.dto';
+import { ThreadsGateway } from '../threads/threads.gateway';
+
 @Injectable()
 export class ReactionsService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private readonly threadsGateway: ThreadsGateway,
+  ) {}
 
   async create(createReactionDto: CreateReactionDto) {
     const post = await this.prisma.post.findUnique({
       where: { id: createReactionDto.postId },
+      include: { thread: true },
     });
 
     if (!post) {
@@ -29,24 +35,38 @@ export class ReactionsService {
       throw new BadRequestException('Reaction already exists');
     }
 
-    return this.prisma.reaction.create({
+    const reaction = await this.prisma.reaction.create({
       data: createReactionDto,
     });
+
+    // Send real-time notification
+    this.threadsGateway.sendNewReactionToPost(post.thread.id, reaction);
+
+    return reaction;
   }
 
   async update(reactionId: string, reactionType: ReactionType) {
     const reaction = await this.prisma.reaction.findUnique({
       where: { id: reactionId },
+      include: { post: { include: { thread: true } } },
     });
 
     if (!reaction) {
       throw new NotFoundException('Reaction not found');
     }
 
-    return this.prisma.reaction.update({
+    const updatedReaction = await this.prisma.reaction.update({
       where: { id: reactionId },
       data: { type: reactionType },
     });
+
+    // Send real-time notification
+    this.threadsGateway.sendUpdatedReactionToPost(
+      reaction.post.thread.id,
+      updatedReaction,
+    );
+
+    return updatedReaction;
   }
 
   async findOne(reactionId: string) {
@@ -62,8 +82,26 @@ export class ReactionsService {
   }
 
   async remove(reactionId: string) {
-    return this.prisma.reaction.delete({
+    const reaction = await this.prisma.reaction.findUnique({
+      where: { id: reactionId },
+      include: { post: { include: { thread: true } } },
+    });
+
+    if (!reaction) {
+      throw new NotFoundException('Reaction not found');
+    }
+
+    await this.prisma.reaction.delete({
       where: { id: reactionId },
     });
+
+    // Send real-time notification
+    this.threadsGateway.sendDeletedReactionFromPost(
+      reaction.post.thread.id,
+      reactionId,
+      reaction.postId,
+    );
+
+    return { id: reactionId };
   }
 }
