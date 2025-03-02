@@ -304,6 +304,8 @@ export class PostsService {
     // Add reaction counts
     const reactionCounts = this.countReactionsByType(updatedPost.reactions);
 
+    this.threadGateway.sendUpdatedPostToThread(post.threadId, updatedPost);
+
     return {
       ...updatedPost,
       totalRepliesCount,
@@ -360,6 +362,8 @@ export class PostsService {
         },
       }),
     ]);
+
+    this.threadGateway.sendDeletedPostToThread(post.threadId, id);
 
     return { success: true };
   }
