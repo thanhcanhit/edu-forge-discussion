@@ -406,17 +406,18 @@ export class PostsService {
     courseId: string,
     authorId: string,
   ): Promise<{ hasReviewed: boolean; reviewId?: string }> {
+    console.log('Checking if user has reviewed course', courseId, authorId);
     // Find thread for this course
     const thread = await this.prisma.thread.findFirst({
       where: {
-        resourceId: courseId,
+        id: courseId,
         type: DiscussionType.COURSE_REVIEW,
         deletedAt: null,
       },
     });
 
     if (!thread) {
-      return { hasReviewed: false };
+      throw new NotFoundException('Course review thread not found');
     }
 
     // Check if user has a review post in this thread

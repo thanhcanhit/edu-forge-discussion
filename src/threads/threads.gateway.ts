@@ -1,30 +1,26 @@
-import { Injectable, ParseUUIDPipe } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ThreadsService } from './threads.service';
-import { Post, Reaction } from '@prisma/client';
+import { Post } from '@prisma/client';
 
-interface TypingEvent {
-  threadId: string;
+interface ThreadUser {
   userId: string;
   userName: string;
-  isTyping: boolean;
-}
-
-interface TypingUser {
-  userId: string;
-  userName: string;
+  socketId: string;
+  lastActivity: Date;
 }
 
 @Injectable()
 @WebSocketGateway({
-  namespace: 'threads',
+  namespace: '/threads',
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     methods: ['GET', 'POST'],
@@ -32,119 +28,209 @@ interface TypingUser {
   },
   allowEIO3: true,
 })
-export class ThreadsGateway {
+export class ThreadsGateway implements OnGatewayInit {
   @WebSocketServer()
   server: Server;
 
-  private typingUsers: Map<string, Set<TypingUser>> = new Map();
+  private readonly CLEANUP_INTERVAL = 1000 * 60 * 30; // 30 minutes
+  private readonly INACTIVE_THRESHOLD = 1000 * 60 * 60; // 1 hour
 
-  constructor(private readonly threadService: ThreadsService) {}
+  // Map to track users in each thread
+  private threadUsers: Map<string, Set<ThreadUser>> = new Map();
+
+  // Map to track socket IDs for each user
+  private userSockets: Map<string, Set<string>> = new Map();
+
+  constructor(private readonly threadService: ThreadsService) {
+    setInterval(() => this.cleanupInactiveThreads(), this.CLEANUP_INTERVAL);
+  }
+
+  afterInit(server: Server) {
+    console.log('WebSocket Gateway initialized');
+
+    server.on('connection', (socket) => {
+      console.log(`Client connected: ${socket.id}`);
+
+      socket.on('disconnect', () => {
+        console.log(`Client disconnected: ${socket.id}`);
+        this.handleDisconnect(socket);
+      });
+    });
+  }
+
+  private cleanupInactiveThreads(): void {
+    const now = new Date();
+    this.threadUsers.forEach((users, threadId) => {
+      users.forEach((user) => {
+        if (
+          now.getTime() - user.lastActivity.getTime() >
+          this.INACTIVE_THRESHOLD
+        ) {
+          users.delete(user);
+          this.userSockets.delete(user.userId);
+        }
+      });
+
+      if (users.size === 0) {
+        this.threadUsers.delete(threadId);
+      }
+    });
+  }
+
+  private handleDisconnect(socket: Socket) {
+    const user = socket.handshake.auth?.user as
+      | { id: string; name: string }
+      | undefined;
+    if (!user?.id) return;
+
+    const userSocketIds = this.userSockets.get(user.id);
+    if (userSocketIds) {
+      userSocketIds.delete(socket.id);
+      if (userSocketIds.size === 0) {
+        this.userSockets.delete(user.id);
+      }
+    }
+
+    if (!this.userSockets.has(user.id)) {
+      this.threadUsers.forEach((users, threadId) => {
+        const userToRemove = Array.from(users).find(
+          (u) => u.userId === user.id,
+        );
+        if (userToRemove) {
+          users.delete(userToRemove);
+          const threadRoom = `thread-${threadId}`;
+
+          this.server.to(threadRoom).emit('thread-users', {
+            threadId,
+            users: Array.from(users).map(({ userId, userName }) => ({
+              userId,
+              userName,
+            })),
+          });
+        }
+      });
+    }
+  }
 
   @SubscribeMessage('join-thread')
   async handleJoinThread(
-    @MessageBody(ParseUUIDPipe) threadId: string,
+    @MessageBody() data: { threadId: string; userId: string; userName: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const threadExists = await this.threadService.findOne(threadId);
+    const { threadId, userId, userName } = data;
 
-    if (!threadExists) {
-      return 'Thread does not exist';
+    try {
+      const threadExists = await this.threadService.findOne(threadId);
+      if (!threadExists) {
+        return { error: 'Thread does not exist' };
+      }
+
+      const threadRoom = `thread-${threadId}`;
+      await client.join(threadRoom);
+
+      if (!this.userSockets.has(userId)) {
+        this.userSockets.set(userId, new Set());
+      }
+      this.userSockets.get(userId)?.add(client.id);
+
+      if (!this.threadUsers.has(threadId)) {
+        this.threadUsers.set(threadId, new Set());
+      }
+
+      const threadRoomUsers = this.threadUsers.get(threadId);
+      if (threadRoomUsers) {
+        const newUser: ThreadUser = {
+          userId,
+          userName,
+          socketId: client.id,
+          lastActivity: new Date(),
+        };
+
+        const existingUser = Array.from(threadRoomUsers).find(
+          (u) => u.userId === userId,
+        );
+        if (existingUser) {
+          threadRoomUsers.delete(existingUser);
+        }
+
+        threadRoomUsers.add(newUser);
+
+        // Send current users list to the new user
+        client.emit('thread-users', {
+          threadId,
+          users: Array.from(threadRoomUsers).map(({ userId, userName }) => ({
+            userId,
+            userName,
+          })),
+        });
+
+        // Notify others if it's a new user
+        if (!existingUser) {
+          client.to(threadRoom).emit('user-joined', {
+            userId,
+            userName,
+          });
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error joining thread:', error);
+      return { error: 'Failed to join thread' };
     }
-
-    await client.join(`thread-${threadId}`);
-    console.log(`Client ${client.id} joined thread ${threadId}`);
-    client.emit('joined-thread', threadId);
   }
 
   @SubscribeMessage('leave-thread')
   async handleLeaveThread(
-    @MessageBody(ParseUUIDPipe) threadId: string,
+    @MessageBody() data: { threadId: string; userId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    await client.leave(`thread-${threadId}`);
-    console.log(`Client ${client.id} left thread ${threadId}`);
-    client.emit('left-thread', threadId);
-  }
-
-  @SubscribeMessage('typing')
-  handleTyping(
-    @MessageBody() data: TypingEvent,
-    @ConnectedSocket() client: Socket,
-  ) {
-    const { threadId, userId, userName, isTyping } = data;
+    const { threadId, userId } = data;
     const threadRoom = `thread-${threadId}`;
 
-    // Update typing users for this thread
-    if (!this.typingUsers.has(threadId)) {
-      this.typingUsers.set(threadId, new Set());
+    await client.leave(threadRoom);
+
+    const userSocketIds = this.userSockets.get(userId);
+    if (userSocketIds) {
+      userSocketIds.delete(client.id);
+      if (userSocketIds.size === 0) {
+        this.userSockets.delete(userId);
+      }
     }
 
-    const threadTypingUsers = this.typingUsers.get(threadId);
-    if (!threadTypingUsers) return;
+    if (!this.userSockets.has(userId)) {
+      const threadRoomUsers = this.threadUsers.get(threadId);
+      if (threadRoomUsers) {
+        const userToRemove = Array.from(threadRoomUsers).find(
+          (u) => u.userId === userId,
+        );
+        if (userToRemove) {
+          threadRoomUsers.delete(userToRemove);
 
-    const typingUser: TypingUser = { userId, userName };
-
-    if (isTyping) {
-      threadTypingUsers.add(typingUser);
-    } else {
-      threadTypingUsers.delete(typingUser);
+          this.server.to(threadRoom).emit('thread-users', {
+            threadId,
+            users: Array.from(threadRoomUsers).map(({ userId, userName }) => ({
+              userId,
+              userName,
+            })),
+          });
+        }
+      }
     }
 
-    // Emit typing status to all users in thread except sender
-    client.to(threadRoom).emit('user-typing', {
-      threadId,
-      typingUsers: Array.from(threadTypingUsers),
-    });
+    return { success: true };
   }
 
-  // Send new post to thread
+  // Post update methods
   sendNewPostToThread(threadId: string, post: Post): void {
     this.server.to(`thread-${threadId}`).emit('new-post', post);
-    // Clear typing indicator for the user who posted
-    this.clearTypingIndicator(threadId, post.authorId);
   }
 
-  // Send updated post to thread
   sendUpdatedPostToThread(threadId: string, post: Post): void {
     this.server.to(`thread-${threadId}`).emit('update-post', post);
   }
 
-  // Send deleted post to thread
   sendDeletedPostToThread(threadId: string, postId: string): void {
     this.server.to(`thread-${threadId}`).emit('delete-post', { postId });
-  }
-
-  // Send new reaction to thread
-  sendNewReactionToThread(threadId: string, reaction: Reaction): void {
-    this.server.to(`thread-${threadId}`).emit('new-reaction', reaction);
-  }
-
-  // Send updated reaction to thread
-  sendUpdatedReactionToThread(threadId: string, reaction: Reaction): void {
-    this.server.to(`thread-${threadId}`).emit('update-reaction', reaction);
-  }
-
-  // Send deleted reaction to thread
-  sendDeletedReactionToThread(threadId: string, reactionId: string): void {
-    this.server
-      .to(`thread-${threadId}`)
-      .emit('delete-reaction', { reactionId });
-  }
-
-  private clearTypingIndicator(threadId: string, userId: string): void {
-    const threadTypingUsers = this.typingUsers.get(threadId);
-    if (!threadTypingUsers) return;
-
-    const userToRemove = Array.from(threadTypingUsers).find(
-      (u) => u.userId === userId,
-    );
-
-    if (userToRemove) {
-      threadTypingUsers.delete(userToRemove);
-      this.server.to(`thread-${threadId}`).emit('user-typing', {
-        threadId,
-        typingUsers: Array.from(threadTypingUsers),
-      });
-    }
   }
 }
