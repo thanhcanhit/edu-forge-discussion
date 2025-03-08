@@ -1,0 +1,409 @@
+{
+  "info": {
+    "name": "Edu Forge Discussion Service API",
+    "description": "API collection for testing Edu Forge Discussion Service V1.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Threads",
+      "description": "Thread management endpoints",
+      "item": [
+        {
+          "name": "Create Thread",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/threads",
+              "host": ["{{baseUrl}}"],
+              "path": ["threads"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"COURSE_REVIEW\",\n  \"resourceId\": \"{{courseId}}\",\n  \"overallRating\": 4.5\n}"
+            },
+            "description": "Create a new thread (discussion or review)"
+          }
+        },
+        {
+          "name": "Get All Threads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/threads",
+              "host": ["{{baseUrl}}"],
+              "path": ["threads"]
+            },
+            "description": "Retrieve all threads"
+          }
+        },
+        {
+          "name": "Get Thread by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["threads", "{{threadId}}"]
+            },
+            "description": "Get a specific thread by its ID"
+          }
+        },
+        {
+          "name": "Get Thread Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/threads/{{threadId}}/posts?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["threads", "{{threadId}}", "posts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get all posts for a specific thread"
+          }
+        },
+        {
+          "name": "Update Thread",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["threads", "{{threadId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"overallRating\": 4.8\n}"
+            },
+            "description": "Update thread properties"
+          }
+        },
+        {
+          "name": "Delete Thread",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["threads", "{{threadId}}"]
+            },
+            "description": "Delete a thread by its ID"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "description": "Post management endpoints",
+      "item": [
+        {
+          "name": "Create Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/posts?authorId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["posts"],
+              "query": [
+                {
+                  "key": "authorId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"threadId\": \"{{threadId}}\",\n  \"content\": \"This is a test post about the course. I found it very informative!\",\n  \"rating\": 4,\n  \"parentId\": null\n}"
+            },
+            "description": "Create a new post or reply"
+          }
+        },
+        {
+          "name": "Get Post by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}?includeDeleted=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["posts", "{{postId}}"],
+              "query": [
+                {
+                  "key": "includeDeleted",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Get a specific post by ID"
+          }
+        },
+        {
+          "name": "Get Post Replies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}/replies?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["posts", "{{postId}}", "replies"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get replies to a specific post"
+          }
+        },
+        {
+          "name": "Check if User Reviewed Course",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/has-reviewed?courseId={{courseId}}&authorId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["posts", "has-reviewed"],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "authorId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Check if a user has already reviewed a course"
+          }
+        },
+        {
+          "name": "Update Post",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}?authorId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["posts", "{{postId}}"],
+              "query": [
+                {
+                  "key": "authorId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated content with more details.\",\n  \"rating\": 5\n}"
+            },
+            "description": "Update a post's content or rating"
+          }
+        },
+        {
+          "name": "Delete Post",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts/{{postId}}?authorId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["posts", "{{postId}}"],
+              "query": [
+                {
+                  "key": "authorId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Soft delete a post"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reactions",
+      "description": "Reaction management endpoints",
+      "item": [
+        {
+          "name": "Create Reaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["reactions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postId\": \"{{postId}}\",\n  \"userId\": \"{{userId}}\",\n  \"type\": \"LIKE\"\n}"
+            },
+            "description": "Create a new reaction on a post"
+          }
+        },
+        {
+          "name": "Get Reaction by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reactions/{{reactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reactions", "{{reactionId}}"]
+            },
+            "description": "Get a specific reaction by ID"
+          }
+        },
+        {
+          "name": "Get Reactions by Post ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reactions/post/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reactions", "post", "{{postId}}"]
+            },
+            "description": "Get all reactions for a specific post"
+          }
+        },
+        {
+          "name": "Update Reaction",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reactions/{{reactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reactions", "{{reactionId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"LOVE\"\n}"
+            },
+            "description": "Update a reaction type"
+          }
+        },
+        {
+          "name": "Delete Reaction",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reactions/{{reactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reactions", "{{reactionId}}"]
+            },
+            "description": "Delete a reaction"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/v1/api",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "d0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      "type": "string",
+      "description": "Test user ID"
+    },
+    {
+      "key": "courseId",
+      "value": "e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e11",
+      "type": "string",
+      "description": "Test course ID"
+    },
+    {
+      "key": "threadId",
+      "value": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b11",
+      "type": "string",
+      "description": "Test thread ID"
+    },
+    {
+      "key": "postId",
+      "value": "c0eebc99-9c0b-4ef8-bb6d-6bb9bd380c11",
+      "type": "string",
+      "description": "Test post ID"
+    },
+    {
+      "key": "reactionId",
+      "value": "d0eebc99-9c0b-4ef8-bb6d-6bb9bd380d11",
+      "type": "string",
+      "description": "Test reaction ID"
+    }
+  ]
+}
