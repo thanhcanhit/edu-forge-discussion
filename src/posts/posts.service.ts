@@ -5,19 +5,13 @@ import {
 } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import {
-  DiscussionType,
-  PrismaClient,
-  ReactionType,
-  Reaction,
-  Post,
-} from '@prisma/client';
+import { DiscussionType, ReactionType, Reaction, Post } from '@prisma/client';
 import { ThreadsGateway } from 'src/threads/threads.gateway';
 import {
   PostWithTotalReplies,
   ReactionCounts,
 } from './interfaces/post.interface';
-
+import { PrismaService } from 'src/prisma/prisma.service';
 type PostWithReplies = Post & {
   _count: {
     replies: number;
@@ -28,7 +22,7 @@ type PostWithReplies = Post & {
 @Injectable()
 export class PostsService {
   constructor(
-    private prisma: PrismaClient,
+    private prisma: PrismaService,
     private threadGateway: ThreadsGateway,
   ) {}
 

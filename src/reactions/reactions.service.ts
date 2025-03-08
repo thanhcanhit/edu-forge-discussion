@@ -3,14 +3,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaClient, ReactionType } from '@prisma/client';
+import { ReactionType } from '@prisma/client';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 import { ThreadsGateway } from '../threads/threads.gateway';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ReactionsService {
   constructor(
-    private prisma: PrismaClient,
+    private prisma: PrismaService,
     private readonly threadsGateway: ThreadsGateway,
   ) {}
 

@@ -1,18 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { UpdateThreadDto } from './dto/update-thread.dto';
-import {
-  PrismaClient,
-  Thread,
-  ReactionType,
-  Reaction,
-  Post,
-} from '@prisma/client';
+import { Thread, ReactionType, Reaction, Post } from '@prisma/client';
 import { ThreadWithPosts } from './interfaces/thread.interface';
 import {
   PostWithTotalReplies,
   ReactionCounts,
 } from '../posts/interfaces/post.interface';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 type PostWithReplies = Post & {
   _count: {
@@ -23,7 +18,7 @@ type PostWithReplies = Post & {
 
 @Injectable()
 export class ThreadsService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(createThreadDto: CreateThreadDto): Promise<Thread> {
     return this.prisma.thread.create({
