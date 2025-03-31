@@ -45,7 +45,6 @@ export class PostsController {
     name: 'authorId',
     description: 'User ID to check for review',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiOkResponse({
@@ -64,7 +63,7 @@ export class PostsController {
   })
   hasUserReviewedCourse(
     @Query('courseId', ParseUUIDPipe) courseId: string,
-    @Query('authorId', ParseUUIDPipe) authorId: string,
+    @Query('authorId') authorId: string,
   ): Promise<{ hasReviewed: boolean; reviewId?: string }> {
     return this.postsService.hasUserReviewedCourse(courseId, authorId);
   }
@@ -75,7 +74,6 @@ export class PostsController {
     name: 'authorId',
     description: 'Author ID of the post',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiBody({
@@ -96,7 +94,7 @@ export class PostsController {
   })
   create(
     @Body() createPostDto: CreatePostDto,
-    @Query('authorId', ParseUUIDPipe) authorId: string,
+    @Query('authorId') authorId: string,
   ) {
     return this.postsService.create(authorId, createPostDto);
   }
@@ -196,7 +194,6 @@ export class PostsController {
     name: 'authorId',
     description: 'Author ID for authorization',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiBody({
@@ -224,7 +221,7 @@ export class PostsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePostDto: UpdatePostDto,
-    @Query('authorId', ParseUUIDPipe) authorId: string,
+    @Query('authorId') authorId: string,
   ): Promise<PostWithTotalReplies> {
     return this.postsService.update(id, authorId, updatePostDto);
   }
@@ -242,7 +239,6 @@ export class PostsController {
     name: 'authorId',
     description: 'Author ID for authorization',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiNoContentResponse({
@@ -255,7 +251,7 @@ export class PostsController {
   })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('authorId', ParseUUIDPipe) authorId: string,
+    @Query('authorId') authorId: string,
   ) {
     return this.postsService.remove(id, authorId);
   }

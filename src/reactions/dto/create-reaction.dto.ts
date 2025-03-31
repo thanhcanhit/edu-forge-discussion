@@ -1,12 +1,12 @@
 import { ReactionType } from '@prisma/client';
-import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsUUID, IsString } from 'class-validator';
 
 export class CreateReactionDto {
   @IsUUID()
   @IsNotEmpty()
   postId: string;
 
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
   userId: string;
 

@@ -42,7 +42,7 @@ export class ReactionsController {
           type: 'string',
           enum: Object.values(ReactionType),
         },
-        userId: { type: 'string', format: 'uuid' },
+        userId: { type: 'string' },
         postId: { type: 'string', format: 'uuid' },
         // Add other reaction properties as needed
       },
@@ -71,7 +71,7 @@ export class ReactionsController {
           type: 'string',
           enum: Object.values(ReactionType),
         },
-        userId: { type: 'string', format: 'uuid' },
+        userId: { type: 'string' },
         postId: { type: 'string', format: 'uuid' },
         // Add other reaction properties as needed
       },
@@ -103,7 +103,7 @@ export class ReactionsController {
             type: 'string',
             enum: Object.values(ReactionType),
           },
-          userId: { type: 'string', format: 'uuid' },
+          userId: { type: 'string' },
           postId: { type: 'string', format: 'uuid' },
           // Add other reaction properties as needed
         },
@@ -146,7 +146,7 @@ export class ReactionsController {
           type: 'string',
           enum: Object.values(ReactionType),
         },
-        userId: { type: 'string', format: 'uuid' },
+        userId: { type: 'string' },
         postId: { type: 'string', format: 'uuid' },
         // Add other reaction properties as needed
       },

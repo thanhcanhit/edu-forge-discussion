@@ -42,10 +42,13 @@ export class ThreadsController {
     schema: {
       type: 'object',
       properties: {
-        // Define Thread properties here based on your Prisma model
         id: { type: 'string', format: 'uuid' },
-        title: { type: 'string' },
-        // Add other Thread properties as needed
+        type: { type: 'string', enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'] },
+        resourceId: { type: 'string', format: 'uuid' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+        deletedAt: { type: 'string', format: 'date-time', nullable: true },
+        overallRating: { type: 'number', nullable: true },
       },
     },
   })
@@ -62,10 +65,16 @@ export class ThreadsController {
       items: {
         type: 'object',
         properties: {
-          // Define Thread properties here
           id: { type: 'string', format: 'uuid' },
-          title: { type: 'string' },
-          // Add other Thread properties as needed
+          type: {
+            type: 'string',
+            enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
+          },
+          resourceId: { type: 'string', format: 'uuid' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          deletedAt: { type: 'string', format: 'date-time', nullable: true },
+          overallRating: { type: 'number', nullable: true },
         },
       },
     },
@@ -88,10 +97,54 @@ export class ThreadsController {
     schema: {
       type: 'object',
       properties: {
-        // Define Thread properties here
         id: { type: 'string', format: 'uuid' },
-        title: { type: 'string' },
-        // Add other Thread properties as needed
+        type: { type: 'string', enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'] },
+        resourceId: { type: 'string', format: 'uuid' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+        deletedAt: { type: 'string', format: 'date-time', nullable: true },
+        overallRating: { type: 'number', nullable: true },
+        posts: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              threadId: { type: 'string', format: 'uuid' },
+              parentId: { type: 'string', format: 'uuid', nullable: true },
+              authorId: { type: 'string' },
+              content: { type: 'string' },
+              rating: { type: 'number', nullable: true },
+              isEdited: { type: 'boolean' },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              deletedAt: {
+                type: 'string',
+                format: 'date-time',
+                nullable: true,
+              },
+              totalRepliesCount: { type: 'number' },
+              reactionCounts: {
+                type: 'object',
+                properties: {
+                  LIKE: { type: 'number' },
+                  LOVE: { type: 'number' },
+                  CARE: { type: 'number' },
+                  HAHA: { type: 'number' },
+                  WOW: { type: 'number' },
+                  SAD: { type: 'number' },
+                  ANGRY: { type: 'number' },
+                },
+              },
+            },
+          },
+        },
+        _count: {
+          type: 'object',
+          properties: {
+            posts: { type: 'number' },
+          },
+        },
       },
     },
   })
@@ -128,10 +181,29 @@ export class ThreadsController {
       items: {
         type: 'object',
         properties: {
-          // Define post properties here
           id: { type: 'string', format: 'uuid' },
+          threadId: { type: 'string', format: 'uuid' },
+          parentId: { type: 'string', format: 'uuid', nullable: true },
+          authorId: { type: 'string' },
           content: { type: 'string' },
-          // Add other post properties as needed
+          rating: { type: 'number', nullable: true },
+          isEdited: { type: 'boolean' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          deletedAt: { type: 'string', format: 'date-time', nullable: true },
+          totalRepliesCount: { type: 'number' },
+          reactionCounts: {
+            type: 'object',
+            properties: {
+              LIKE: { type: 'number' },
+              LOVE: { type: 'number' },
+              CARE: { type: 'number' },
+              HAHA: { type: 'number' },
+              WOW: { type: 'number' },
+              SAD: { type: 'number' },
+              ANGRY: { type: 'number' },
+            },
+          },
         },
       },
     },
@@ -160,10 +232,13 @@ export class ThreadsController {
     schema: {
       type: 'object',
       properties: {
-        // Define Thread properties here
         id: { type: 'string', format: 'uuid' },
-        title: { type: 'string' },
-        // Add other Thread properties as needed
+        type: { type: 'string', enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'] },
+        resourceId: { type: 'string', format: 'uuid' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+        deletedAt: { type: 'string', format: 'date-time', nullable: true },
+        overallRating: { type: 'number', nullable: true },
       },
     },
   })
