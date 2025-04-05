@@ -1,6 +1,6 @@
 # Edu Forge Discussion Service - Postman Testing Guide
 
-This guide provides instructions for testing the Edu Forge Discussion Service API using Postman.avc
+This guide provides instructions for testing the Edu Forge Discussion Service API using Postman.
 
 ## Files Included
 
