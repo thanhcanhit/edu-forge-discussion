@@ -2,7 +2,7 @@
 
 **prefix**: /v1/api
 
-**author**: thanhcanhit
+**author**: thanhcanhit 123
 
 **postman**: [View Postman Documentation](./POSTMAN_README.md)
 
