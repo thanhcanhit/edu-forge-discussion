@@ -16,9 +16,20 @@ import { ThreadUser } from './interfaces/thread.interface';
 @WebSocketGateway({
   namespace: '/threads',
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    origin: process.env.CLIENT_URL || [
+      'http://localhost:3000',
+      'https://eduforge.io.vn',
+      'https://kong.eduforge.io.vn',
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Origin',
+      'X-Requested-With',
+    ],
   },
   allowEIO3: true,
 })
