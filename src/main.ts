@@ -8,23 +8,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('/api/v1/discussion');
 
-  // Enable CORS
-  app.enableCors({
-    origin: ['*'], // Allow all origins
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: [
-      'Content-Type',
-      'Accept',
-      'Authorization',
-      'Origin',
-      'X-Requested-With',
-      'Access-Control-Allow-Origin',
-    ],
-    credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-  });
-
   // Swagger
   const config = new DocumentBuilder()
     .setTitle('Edu Forge Discussion Service API')
@@ -43,6 +26,14 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Enable CORS
+  app.enableCors({
+    origin: ['*'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id'],
+    credentials: true,
+  });
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 
