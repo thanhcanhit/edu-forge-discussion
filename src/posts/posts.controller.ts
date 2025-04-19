@@ -10,6 +10,8 @@ import {
   ParseUUIDPipe,
   ParseBoolPipe,
   ParseIntPipe,
+  Headers,
+  BadRequestException,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -72,13 +74,22 @@ export class PostsController {
   @ApiOperation({ summary: 'Create a new post' })
   @ApiQuery({
     name: 'authorId',
-    description: 'Author ID of the post',
+    description:
+      'Author ID of the post (optional if X-User-Id header is provided)',
     type: 'string',
-    required: true,
+    required: false,
   })
   @ApiBody({
     type: CreatePostDto,
     description: 'Post creation data',
+  })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
   })
   @ApiCreatedResponse({
     description: 'The post has been successfully created',
@@ -94,8 +105,18 @@ export class PostsController {
   })
   create(
     @Body() createPostDto: CreatePostDto,
-    @Query('authorId') authorId: string,
+    @Query('authorId') queryAuthorId?: string,
+    @Headers('X-User-Id') headerUserId?: string,
   ) {
+    // Use the header user ID if available, otherwise fall back to query parameter
+    const authorId = headerUserId || queryAuthorId;
+
+    if (!authorId) {
+      throw new BadRequestException(
+        'Author ID is required. Provide it either via X-User-Id header or authorId query parameter.',
+      );
+    }
+
     return this.postsService.create(authorId, createPostDto);
   }
 
@@ -192,13 +213,22 @@ export class PostsController {
   })
   @ApiQuery({
     name: 'authorId',
-    description: 'Author ID for authorization',
+    description:
+      'Author ID for authorization (optional if X-User-Id header is provided)',
     type: 'string',
-    required: true,
+    required: false,
   })
   @ApiBody({
     type: UpdatePostDto,
     description: 'Post update data',
+  })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
   })
   @ApiOkResponse({
     description: 'Post has been successfully updated',
@@ -221,8 +251,18 @@ export class PostsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePostDto: UpdatePostDto,
-    @Query('authorId') authorId: string,
+    @Query('authorId') queryAuthorId?: string,
+    @Headers('X-User-Id') headerUserId?: string,
   ): Promise<PostWithTotalReplies> {
+    // Use the header user ID if available, otherwise fall back to query parameter
+    const authorId = headerUserId || queryAuthorId;
+
+    if (!authorId) {
+      throw new BadRequestException(
+        'Author ID is required. Provide it either via X-User-Id header or authorId query parameter.',
+      );
+    }
+
     return this.postsService.update(id, authorId, updatePostDto);
   }
 
@@ -237,9 +277,18 @@ export class PostsController {
   })
   @ApiQuery({
     name: 'authorId',
-    description: 'Author ID for authorization',
+    description:
+      'Author ID for authorization (optional if X-User-Id header is provided)',
     type: 'string',
-    required: true,
+    required: false,
+  })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
   })
   @ApiNoContentResponse({
     description: 'Post has been successfully deleted',
@@ -251,8 +300,18 @@ export class PostsController {
   })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('authorId') authorId: string,
+    @Query('authorId') queryAuthorId?: string,
+    @Headers('X-User-Id') headerUserId?: string,
   ) {
+    // Use the header user ID if available, otherwise fall back to query parameter
+    const authorId = headerUserId || queryAuthorId;
+
+    if (!authorId) {
+      throw new BadRequestException(
+        'Author ID is required. Provide it either via X-User-Id header or authorId query parameter.',
+      );
+    }
+
     return this.postsService.remove(id, authorId);
   }
 }

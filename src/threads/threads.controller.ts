@@ -11,6 +11,7 @@ import {
   HttpStatus,
   Query,
   ParseIntPipe,
+  Headers,
 } from '@nestjs/common';
 import { ThreadsService } from './threads.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
@@ -37,6 +38,14 @@ export class ThreadsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new thread' })
   @ApiBody({ type: CreateThreadDto, description: 'Thread creation data' })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiCreatedResponse({
     description: 'The thread has been successfully created',
     schema: {
@@ -52,7 +61,16 @@ export class ThreadsController {
       },
     },
   })
-  create(@Body() createThreadDto: CreateThreadDto): Promise<Thread> {
+  create(
+    @Body() createThreadDto: CreateThreadDto,
+    @Headers('X-User-Id') requestUserId?: string, // Capture user ID from headers for future authorization/auditing
+  ): Promise<Thread> {
+    // Hiện tại chưa sử dụng requestUserId, nhưng trong tương lai có thể cần:
+    // 1. Lưu trữ người tạo thread
+    // 2. Kiểm tra quyền tạo thread
+    // 3. Ghi log hoạt động của người dùng
+
+    // Có thể mở rộng createThreadDto để bao gồm creatorId trong tương lai
     return this.threadsService.create(createThreadDto);
   }
 
@@ -226,6 +244,14 @@ export class ThreadsController {
     format: 'uuid',
     required: true,
   })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiBody({ type: UpdateThreadDto, description: 'Thread update data' })
   @ApiOkResponse({
     description: 'Thread has been successfully updated',
@@ -246,7 +272,13 @@ export class ThreadsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateThreadDto: UpdateThreadDto,
+    @Headers('X-User-Id') requestUserId?: string, // Capture user ID from headers for future authorization/auditing
   ): Promise<Thread> {
+    // Hiện tại chưa sử dụng requestUserId, nhưng trong tương lai có thể cần:
+    // 1. Kiểm tra xem người dùng có quyền cập nhật thread này không
+    // 2. Ghi log hoạt động của người dùng
+    // 3. Thực hiện các kiểm tra bảo mật khác
+
     return this.threadsService.update(id, updateThreadDto);
   }
 
@@ -260,9 +292,25 @@ export class ThreadsController {
     format: 'uuid',
     required: true,
   })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiNoContentResponse({ description: 'Thread has been successfully deleted' })
   @ApiResponse({ status: 404, description: 'Thread not found' })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('X-User-Id') requestUserId?: string, // Capture user ID from headers for future authorization/auditing
+  ): Promise<void> {
+    // Hiện tại chưa sử dụng requestUserId, nhưng trong tương lai có thể cần:
+    // 1. Kiểm tra xem người dùng có quyền xóa thread này không
+    // 2. Ghi log hoạt động của người dùng
+    // 3. Thực hiện các kiểm tra bảo mật khác
+
     await this.threadsService.remove(id);
   }
 }

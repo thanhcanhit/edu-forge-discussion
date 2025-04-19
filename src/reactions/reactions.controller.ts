@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Headers,
 } from '@nestjs/common';
 import { ReactionsService } from './reactions.service';
 import { CreateReactionDto } from './dto/create-reaction.dto';
@@ -32,6 +33,14 @@ export class ReactionsController {
     type: CreateReactionDto,
     description: 'Reaction creation data',
   })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiCreatedResponse({
     description: 'The reaction has been successfully created',
     schema: {
@@ -48,7 +57,15 @@ export class ReactionsController {
       },
     },
   })
-  create(@Body() createReactionDto: CreateReactionDto) {
+  create(
+    @Body() createReactionDto: CreateReactionDto,
+    @Headers('X-User-Id') headerUserId?: string,
+  ) {
+    // If X-User-Id header is provided, use it to override the userId in the DTO
+    if (headerUserId) {
+      createReactionDto.userId = headerUserId;
+    }
+
     return this.reactionsService.create(createReactionDto);
   }
 
@@ -136,6 +153,14 @@ export class ReactionsController {
       required: ['type'],
     },
   })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiOkResponse({
     description: 'Reaction has been successfully updated',
     schema: {
@@ -153,7 +178,17 @@ export class ReactionsController {
     },
   })
   @ApiResponse({ status: 404, description: 'Reaction not found' })
-  update(@Param('id') id: string, @Body('type') type: ReactionType) {
+  update(
+    @Param('id') id: string,
+    @Body('type') type: ReactionType,
+    @Headers('X-User-Id') headerUserId?: string,
+  ) {
+    // Kiểm tra quyền của người dùng trước khi cập nhật reaction
+    if (headerUserId) {
+      // Trong tương lai, có thể thêm logic kiểm tra xem người dùng có quyền cập nhật reaction này không
+      // Ví dụ: chỉ cho phép người tạo reaction cập nhật nó
+    }
+
     return this.reactionsService.update(id, type);
   }
 
@@ -166,11 +201,25 @@ export class ReactionsController {
     format: 'uuid',
     required: true,
   })
+  @ApiResponse({
+    headers: {
+      'X-User-Id': {
+        description: 'User ID from authentication',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @ApiNoContentResponse({
     description: 'Reaction has been successfully deleted',
   })
   @ApiResponse({ status: 404, description: 'Reaction not found' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string, @Headers('X-User-Id') headerUserId?: string) {
+    // Kiểm tra quyền của người dùng trước khi xóa reaction
+    if (headerUserId) {
+      // Trong tương lai, có thể thêm logic kiểm tra xem người dùng có quyền xóa reaction này không
+      // Ví dụ: chỉ cho phép người tạo reaction xóa nó
+    }
+
     return this.reactionsService.remove(id);
   }
 }
