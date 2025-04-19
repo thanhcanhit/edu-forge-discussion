@@ -16,7 +16,7 @@ import {
 import { ThreadsService } from './threads.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { UpdateThreadDto } from './dto/update-thread.dto';
-import { Thread } from '@prisma/client';
+import { Thread, DiscussionType } from '@prisma/client';
 import {
   ApiTags,
   ApiOperation,
@@ -99,6 +99,49 @@ export class ThreadsController {
   })
   findAll(): Promise<Thread[]> {
     return this.threadsService.findAll();
+  }
+
+  @Get('resource/:resourceId')
+  @ApiOperation({ summary: 'Get threads by resource ID' })
+  @ApiParam({
+    name: 'resourceId',
+    description: 'Resource ID',
+    type: 'string',
+    required: true,
+  })
+  @ApiQuery({
+    name: 'type',
+    description: 'Thread type',
+    type: 'string',
+    enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
+    required: false,
+  })
+  @ApiOkResponse({
+    description: 'Threads retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          type: {
+            type: 'string',
+            enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
+          },
+          resourceId: { type: 'string' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          deletedAt: { type: 'string', format: 'date-time', nullable: true },
+          overallRating: { type: 'number', nullable: true },
+        },
+      },
+    },
+  })
+  findByResourceId(
+    @Param('resourceId') resourceId: string,
+    @Query('type') type?: DiscussionType,
+  ): Promise<Thread[]> {
+    return this.threadsService.findByResourceId(resourceId, type);
   }
 
   @Get(':id')

@@ -17,6 +17,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
               }
             ],
             "url": {
@@ -35,7 +39,12 @@
           "name": "Get All Threads",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/threads",
               "host": ["{{baseUrl}}"],
@@ -48,7 +57,12 @@
           "name": "Get Thread by ID",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/threads/{{threadId}}",
               "host": ["{{baseUrl}}"],
@@ -61,7 +75,12 @@
           "name": "Get Thread Posts",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/threads/{{threadId}}/posts?page=1&limit=10",
               "host": ["{{baseUrl}}"],
@@ -83,11 +102,15 @@
         {
           "name": "Update Thread",
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
               }
             ],
             "url": {
@@ -106,7 +129,12 @@
           "name": "Delete Thread",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/threads/{{threadId}}",
               "host": ["{{baseUrl}}"],
@@ -129,18 +157,17 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/posts?authorId={{userId}}",
+              "raw": "{{baseUrl}}/posts",
               "host": ["{{baseUrl}}"],
               "path": ["posts"],
-              "query": [
-                {
-                  "key": "authorId",
-                  "value": "{{userId}}"
-                }
-              ]
+              "query": []
             },
             "body": {
               "mode": "raw",
@@ -153,7 +180,12 @@
           "name": "Get Post by ID",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/posts/{{postId}}?includeDeleted=false",
               "host": ["{{baseUrl}}"],
@@ -172,7 +204,12 @@
           "name": "Get Post Replies",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/posts/{{postId}}/replies?page=1&limit=10",
               "host": ["{{baseUrl}}"],
@@ -195,11 +232,16 @@
           "name": "Check if User Reviewed Course",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/posts/has-reviewed?courseId={{courseId}}&authorId={{userId}}",
+              "raw": "{{baseUrl}}/posts/check-review?courseId={{courseId}}&authorId={{userId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["posts", "has-reviewed"],
+              "path": ["posts", "check-review"],
               "query": [
                 {
                   "key": "courseId",
@@ -222,18 +264,17 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/posts/{{postId}}?authorId={{userId}}",
+              "raw": "{{baseUrl}}/posts/{{postId}}",
               "host": ["{{baseUrl}}"],
               "path": ["posts", "{{postId}}"],
-              "query": [
-                {
-                  "key": "authorId",
-                  "value": "{{userId}}"
-                }
-              ]
+              "query": []
             },
             "body": {
               "mode": "raw",
@@ -246,17 +287,17 @@
           "name": "Delete Post",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/posts/{{postId}}?authorId={{userId}}",
+              "raw": "{{baseUrl}}/posts/{{postId}}",
               "host": ["{{baseUrl}}"],
               "path": ["posts", "{{postId}}"],
-              "query": [
-                {
-                  "key": "authorId",
-                  "value": "{{userId}}"
-                }
-              ]
+              "query": []
             },
             "description": "Soft delete a post"
           }
@@ -275,6 +316,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
               }
             ],
             "url": {
@@ -284,7 +329,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"postId\": \"{{postId}}\",\n  \"userId\": \"{{userId}}\",\n  \"type\": \"LIKE\"\n}"
+              "raw": "{\n  \"postId\": \"{{postId}}\",\n  \"type\": \"LIKE\"\n}"
             },
             "description": "Create a new reaction on a post"
           }
@@ -293,7 +338,12 @@
           "name": "Get Reaction by ID",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/reactions/{{reactionId}}",
               "host": ["{{baseUrl}}"],
@@ -306,7 +356,12 @@
           "name": "Get Reactions by Post ID",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/reactions/post/{{postId}}",
               "host": ["{{baseUrl}}"],
@@ -323,6 +378,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
               }
             ],
             "url": {
@@ -341,7 +400,12 @@
           "name": "Delete Reaction",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/reactions/{{reactionId}}",
               "host": ["{{baseUrl}}"],
@@ -372,7 +436,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000/v1/api",
+      "value": "http://localhost:3000/api/v1/discussion",
       "type": "string"
     },
     {

@@ -272,4 +272,20 @@ export class ThreadsService {
 
     return postsWithTotalReplies;
   }
+
+  async findByResourceId(
+    resourceId: string,
+    type?: DiscussionType,
+  ): Promise<Thread[]> {
+    return this.prisma.thread.findMany({
+      where: {
+        resourceId,
+        ...(type && { type }),
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
 }
