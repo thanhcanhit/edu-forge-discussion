@@ -6,7 +6,18 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('/api/v1/discussion');
+
+  // Enable CORS - Allow all origins, methods, and headers
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: '*',
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  });
+
+  app.setGlobalPrefix('/api/v1/enrollment');
 
   // Swagger
   const config = new DocumentBuilder()
@@ -27,12 +38,6 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS
-  app.enableCors({
-    origin: ['*'],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id'],
-  });
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 

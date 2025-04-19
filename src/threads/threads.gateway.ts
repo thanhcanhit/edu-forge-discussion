@@ -16,17 +16,10 @@ import { ThreadUser } from './interfaces/thread.interface';
 @WebSocketGateway({
   namespace: '/threads',
   cors: {
-    origin: ['*'], // Allow all origins
-    methods: ['GET', 'POST', 'OPTIONS'],
+    origin: true, // Allow all origins
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
-    allowedHeaders: [
-      'Content-Type',
-      'Accept',
-      'Authorization',
-      'Origin',
-      'X-Requested-With',
-      'Access-Control-Allow-Origin',
-    ],
+    allowedHeaders: '*', // Allow all headers
   },
   allowEIO3: true,
 })
