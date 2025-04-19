@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { DiscussionType } from '@prisma/client';
 
 export class CreateThreadDto {
@@ -6,7 +6,7 @@ export class CreateThreadDto {
   @IsNotEmpty()
   type: DiscussionType;
 
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
   resourceId: string;
 }

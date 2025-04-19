@@ -44,7 +44,7 @@ export class ThreadsController {
       properties: {
         id: { type: 'string', format: 'uuid' },
         type: { type: 'string', enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'] },
-        resourceId: { type: 'string', format: 'uuid' },
+        resourceId: { type: 'string' },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
         deletedAt: { type: 'string', format: 'date-time', nullable: true },
@@ -70,7 +70,7 @@ export class ThreadsController {
             type: 'string',
             enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
           },
-          resourceId: { type: 'string', format: 'uuid' },
+          resourceId: { type: 'string' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
           deletedAt: { type: 'string', format: 'date-time', nullable: true },
@@ -99,7 +99,7 @@ export class ThreadsController {
       properties: {
         id: { type: 'string', format: 'uuid' },
         type: { type: 'string', enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'] },
-        resourceId: { type: 'string', format: 'uuid' },
+        resourceId: { type: 'string' },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
         deletedAt: { type: 'string', format: 'date-time', nullable: true },
@@ -234,7 +234,7 @@ export class ThreadsController {
       properties: {
         id: { type: 'string', format: 'uuid' },
         type: { type: 'string', enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'] },
-        resourceId: { type: 'string', format: 'uuid' },
+        resourceId: { type: 'string' },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
         deletedAt: { type: 'string', format: 'date-time', nullable: true },
