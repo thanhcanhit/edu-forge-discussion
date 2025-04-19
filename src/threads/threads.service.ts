@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { UpdateThreadDto } from './dto/update-thread.dto';
-import { Thread, ReactionType, Reaction, Post } from '@prisma/client';
+import {
+  Thread,
+  ReactionType,
+  Reaction,
+  Post,
+  DiscussionType,
+} from '@prisma/client';
 import { ThreadWithPosts } from './interfaces/thread.interface';
 import {
   PostWithTotalReplies,
