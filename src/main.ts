@@ -17,7 +17,7 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
 
-  app.setGlobalPrefix('/api/v1/enrollment');
+  app.setGlobalPrefix('/api/v1/discussion');
 
   // Swagger
   const config = new DocumentBuilder()
