@@ -12,6 +12,8 @@ import {
   Query,
   ParseIntPipe,
   Headers,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ThreadsService } from './threads.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
@@ -61,6 +63,10 @@ export class ThreadsController {
       },
     },
   })
+  @ApiResponse({
+    status: 409,
+    description: 'A thread with this resourceId already exists',
+  })
   create(
     @Body() createThreadDto: CreateThreadDto,
     @Headers('X-User-Id') requestUserId?: string, // Capture user ID from headers for future authorization/auditing
@@ -102,7 +108,7 @@ export class ThreadsController {
   }
 
   @Get('resource/:resourceId')
-  @ApiOperation({ summary: 'Get threads by resource ID' })
+  @ApiOperation({ summary: 'Get thread by resource ID' })
   @ApiParam({
     name: 'resourceId',
     description: 'Resource ID',
@@ -117,31 +123,84 @@ export class ThreadsController {
     required: false,
   })
   @ApiOkResponse({
-    description: 'Threads retrieved successfully',
+    description: 'Thread retrieved successfully',
     schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          type: {
-            type: 'string',
-            enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
-          },
-          resourceId: { type: 'string' },
-          createdAt: { type: 'string', format: 'date-time' },
-          updatedAt: { type: 'string', format: 'date-time' },
-          deletedAt: { type: 'string', format: 'date-time', nullable: true },
-          overallRating: { type: 'number', nullable: true },
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        type: {
+          type: 'string',
+          enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
         },
+        resourceId: { type: 'string' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+        deletedAt: { type: 'string', format: 'date-time', nullable: true },
+        overallRating: { type: 'number', nullable: true },
       },
     },
   })
-  findByResourceId(
+  @ApiResponse({ status: 404, description: 'Thread not found' })
+  async findByResourceId(
     @Param('resourceId') resourceId: string,
     @Query('type') type?: DiscussionType,
-  ): Promise<Thread[]> {
-    return this.threadsService.findByResourceId(resourceId, type);
+  ): Promise<Thread> {
+    const thread = await this.threadsService.findByResourceId(resourceId, type);
+    if (!thread) {
+      throw new NotFoundException(
+        `Thread with resourceId ${resourceId} not found`,
+      );
+    }
+    return thread;
+  }
+
+  @Get('resource/:resourceId/ensure')
+  @ApiOperation({
+    summary: 'Get thread by resource ID or create if not exists',
+  })
+  @ApiParam({
+    name: 'resourceId',
+    description: 'Resource ID',
+    type: 'string',
+    required: true,
+  })
+  @ApiQuery({
+    name: 'type',
+    description: 'Thread type (required for creating a new thread)',
+    type: 'string',
+    enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
+    required: true,
+  })
+  @ApiOkResponse({
+    description: 'Thread retrieved or created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        type: {
+          type: 'string',
+          enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
+        },
+        resourceId: { type: 'string' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+        deletedAt: { type: 'string', format: 'date-time', nullable: true },
+        overallRating: { type: 'number', nullable: true },
+      },
+    },
+  })
+  async findOrCreateByResourceId(
+    @Param('resourceId') resourceId: string,
+    @Query('type') type: DiscussionType,
+    @Headers('X-User-Id') requestUserId?: string, // Capture user ID for future use
+  ): Promise<Thread> {
+    if (!type) {
+      throw new BadRequestException(
+        'Thread type is required when ensuring a thread exists',
+      );
+    }
+
+    return await this.threadsService.findOrCreateByResourceId(resourceId, type);
   }
 
   @Get(':id')

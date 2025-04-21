@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { UpdateThreadDto } from './dto/update-thread.dto';
 import {
@@ -27,6 +31,22 @@ export class ThreadsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createThreadDto: CreateThreadDto): Promise<Thread> {
+    // Check if a thread with the same resourceId already exists
+    const existingThread = await this.prisma.thread.findFirst({
+      where: {
+        resourceId: createThreadDto.resourceId,
+        deletedAt: null,
+      },
+    });
+
+    if (existingThread) {
+      // If a thread with this resourceId already exists, throw a conflict exception
+      throw new ConflictException(
+        `A thread with resourceId ${createThreadDto.resourceId} already exists`,
+      );
+    }
+
+    // If no existing thread, create a new one
     return this.prisma.thread.create({
       data: createThreadDto,
     });
@@ -282,8 +302,9 @@ export class ThreadsService {
   async findByResourceId(
     resourceId: string,
     type?: DiscussionType,
-  ): Promise<Thread[]> {
-    return this.prisma.thread.findMany({
+  ): Promise<Thread | null> {
+    // Return only the most recent thread for the given resource ID
+    return this.prisma.thread.findFirst({
       where: {
         resourceId,
         ...(type && { type }),
@@ -291,6 +312,33 @@ export class ThreadsService {
       },
       orderBy: {
         createdAt: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Find a thread by resource ID, or create one if it doesn't exist
+   * @param resourceId The resource ID to find or create a thread for
+   * @param type The discussion type (required when creating a new thread)
+   * @returns The existing or newly created thread
+   */
+  async findOrCreateByResourceId(
+    resourceId: string,
+    type: DiscussionType,
+  ): Promise<Thread> {
+    // Try to find an existing thread
+    const existingThread = await this.findByResourceId(resourceId, type);
+
+    // If a thread exists, return it
+    if (existingThread) {
+      return existingThread;
+    }
+
+    // If no thread exists, create a new one
+    return this.prisma.thread.create({
+      data: {
+        resourceId,
+        type,
       },
     });
   }

@@ -37,18 +37,21 @@ COPY --from=build-stage /app/dist ./dist
 COPY --from=build-stage /app/package*.json ./
 COPY --from=build-stage /app/prisma ./prisma
 COPY --from=build-stage /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build-stage /app/node_modules/@prisma ./node_modules/@prisma
 
-# Install only production dependencies
+# Install production dependencies plus ts-node for seeding
 ENV HUSKY=0
 RUN npm install --omit=dev --ignore-scripts && \
+    npm install -D ts-node typescript @types/node && \
     npm cache clean --force
 
-# Copy the entrypoint script
+# Copy the entrypoint and utility scripts
 COPY docker-entrypoint.sh ./
-RUN chmod +x ./docker-entrypoint.sh
+COPY scripts/ ./scripts/
+RUN chmod +x ./docker-entrypoint.sh ./scripts/*.sh
 
-# Expose port and define runtime command
-EXPOSE 3008
+# Expose ports for API and Prisma Studio
+EXPOSE 3008 5555
 
 # Set NODE_ENV
 ENV NODE_ENV=production
