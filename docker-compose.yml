@@ -31,9 +31,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: edu-forge-discussion-prisma-studio
-    # No direct port exposure - only accessible through nginx proxy
-    expose:
-      - 5555
+    ports:
+      - '${PRISMA_STUDIO_PORT:-5555}:5555'
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,24 +50,6 @@ services:
       done;
       echo 'PostgreSQL is ready!';
       npx prisma studio --port 5555 --hostname 0.0.0.0"
-
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: edu-forge-discussion-nginx
-    ports:
-      - '${PRISMA_STUDIO_PORT:-5555}:80'
-    depends_on:
-      - prisma-studio
-    env_file:
-      - .env
-    environment:
-      - PRISMA_STUDIO_USERNAME=${PRISMA_STUDIO_USERNAME:-admin}
-      - PRISMA_STUDIO_PASSWORD=${PRISMA_STUDIO_PASSWORD:-changeme}
-    restart: unless-stopped
-    networks:
-      - edu-forge-network
 
   postgres:
     image: postgres:17
@@ -89,25 +70,6 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-  # This service is used to run database seeds and migrations
-  db-tools:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: edu-forge-discussion-db-tools
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
-    networks:
-      - edu-forge-network
-    profiles:
-      - tools
-    # This container will exit after running the command
-    command: echo "Use 'docker-compose run --rm db-tools <command>' to run database tools"
 
 networks:
   edu-forge-network:
