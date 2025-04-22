@@ -6,13 +6,11 @@ import {
   Put,
   Param,
   Delete,
-  ParseUUIDPipe,
   HttpCode,
   HttpStatus,
   Query,
   ParseIntPipe,
   Headers,
-  NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { ThreadsService } from './threads.service';
@@ -69,9 +67,9 @@ export class ThreadsController {
   })
   create(
     @Body() createThreadDto: CreateThreadDto,
-    @Headers('X-User-Id') requestUserId?: string, // Capture user ID from headers for future authorization/auditing
+    @Headers('X-User-Id') _requestUserId?: string, // Capture user ID from headers for future authorization/auditing
   ): Promise<Thread> {
-    // Hiện tại chưa sử dụng requestUserId, nhưng trong tương lai có thể cần:
+    // Hiện tại chưa sử dụng _requestUserId, nhưng trong tương lai có thể cần:
     // 1. Lưu trữ người tạo thread
     // 2. Kiểm tra quyền tạo thread
     // 3. Ghi log hoạt động của người dùng
@@ -89,7 +87,7 @@ export class ThreadsController {
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string', format: 'uuid' },
+          id: { type: 'string' },
           type: {
             type: 'string',
             enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
@@ -108,7 +106,9 @@ export class ThreadsController {
   }
 
   @Get('resource/:resourceId')
-  @ApiOperation({ summary: 'Get thread by resource ID' })
+  @ApiOperation({
+    summary: 'Get thread by resource ID or create if not exists',
+  })
   @ApiParam({
     name: 'resourceId',
     description: 'Resource ID',
@@ -117,17 +117,17 @@ export class ThreadsController {
   })
   @ApiQuery({
     name: 'type',
-    description: 'Thread type',
+    description: 'Thread type (required)',
     type: 'string',
     enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
-    required: false,
+    required: true,
   })
   @ApiOkResponse({
-    description: 'Thread retrieved successfully',
+    description: 'Thread retrieved or created successfully',
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         type: {
           type: 'string',
           enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
@@ -140,23 +140,26 @@ export class ThreadsController {
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Thread not found' })
   async findByResourceId(
     @Param('resourceId') resourceId: string,
-    @Query('type') type?: DiscussionType,
+    @Query('type') type: DiscussionType,
   ): Promise<Thread> {
-    const thread = await this.threadsService.findByResourceId(resourceId, type);
-    if (!thread) {
-      throw new NotFoundException(
-        `Thread with resourceId ${resourceId} not found`,
+    if (!type) {
+      throw new BadRequestException(
+        'Thread type is required when ensuring a thread exists',
       );
     }
-    return thread;
+
+    return await this.threadsService.findOrCreateByResourceId(resourceId, type);
   }
 
+  // This endpoint is kept for backward compatibility
+  // The main resource/:resourceId endpoint now also creates threads if they don't exist
   @Get('resource/:resourceId/ensure')
   @ApiOperation({
     summary: 'Get thread by resource ID or create if not exists',
+    description:
+      'This endpoint is kept for backward compatibility. Use GET /threads/resource/:resourceId instead.',
   })
   @ApiParam({
     name: 'resourceId',
@@ -176,7 +179,7 @@ export class ThreadsController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         type: {
           type: 'string',
           enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'],
@@ -192,7 +195,7 @@ export class ThreadsController {
   async findOrCreateByResourceId(
     @Param('resourceId') resourceId: string,
     @Query('type') type: DiscussionType,
-    @Headers('X-User-Id') requestUserId?: string, // Capture user ID for future use
+    @Headers('X-User-Id') _requestUserId?: string, // Capture user ID for future use
   ): Promise<Thread> {
     if (!type) {
       throw new BadRequestException(
@@ -209,7 +212,6 @@ export class ThreadsController {
     name: 'id',
     description: 'Thread ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiOkResponse({
@@ -217,7 +219,7 @@ export class ThreadsController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         type: { type: 'string', enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'] },
         resourceId: { type: 'string' },
         createdAt: { type: 'string', format: 'date-time' },
@@ -229,9 +231,9 @@ export class ThreadsController {
           items: {
             type: 'object',
             properties: {
-              id: { type: 'string', format: 'uuid' },
-              threadId: { type: 'string', format: 'uuid' },
-              parentId: { type: 'string', format: 'uuid', nullable: true },
+              id: { type: 'string' },
+              threadId: { type: 'string' },
+              parentId: { type: 'string', nullable: true },
               authorId: { type: 'string' },
               content: { type: 'string' },
               rating: { type: 'number', nullable: true },
@@ -269,7 +271,7 @@ export class ThreadsController {
     },
   })
   @ApiResponse({ status: 404, description: 'Thread not found' })
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Thread> {
+  findOne(@Param('id') id: string): Promise<Thread> {
     return this.threadsService.findOne(id);
   }
 
@@ -279,7 +281,6 @@ export class ThreadsController {
     name: 'id',
     description: 'Thread ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiQuery({
@@ -330,7 +331,7 @@ export class ThreadsController {
   })
   @ApiResponse({ status: 404, description: 'Thread not found' })
   findThreadPosts(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Query('page', ParseIntPipe) page?: number,
     @Query('limit', ParseIntPipe) limit?: number,
   ) {
@@ -343,7 +344,6 @@ export class ThreadsController {
     name: 'id',
     description: 'Thread ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiResponse({
@@ -360,7 +360,7 @@ export class ThreadsController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         type: { type: 'string', enum: ['COURSE_REVIEW', 'LESSON_DISCUSSION'] },
         resourceId: { type: 'string' },
         createdAt: { type: 'string', format: 'date-time' },
@@ -372,11 +372,11 @@ export class ThreadsController {
   })
   @ApiResponse({ status: 404, description: 'Thread not found' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updateThreadDto: UpdateThreadDto,
-    @Headers('X-User-Id') requestUserId?: string, // Capture user ID from headers for future authorization/auditing
+    @Headers('X-User-Id') _requestUserId?: string, // Capture user ID from headers for future authorization/auditing
   ): Promise<Thread> {
-    // Hiện tại chưa sử dụng requestUserId, nhưng trong tương lai có thể cần:
+    // Hiện tại chưa sử dụng _requestUserId, nhưng trong tương lai có thể cần:
     // 1. Kiểm tra xem người dùng có quyền cập nhật thread này không
     // 2. Ghi log hoạt động của người dùng
     // 3. Thực hiện các kiểm tra bảo mật khác
@@ -391,7 +391,6 @@ export class ThreadsController {
     name: 'id',
     description: 'Thread ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiResponse({
@@ -405,10 +404,10 @@ export class ThreadsController {
   @ApiNoContentResponse({ description: 'Thread has been successfully deleted' })
   @ApiResponse({ status: 404, description: 'Thread not found' })
   async remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Headers('X-User-Id') requestUserId?: string, // Capture user ID from headers for future authorization/auditing
+    @Param('id') id: string,
+    @Headers('X-User-Id') _requestUserId?: string, // Capture user ID from headers for future authorization/auditing
   ): Promise<void> {
-    // Hiện tại chưa sử dụng requestUserId, nhưng trong tương lai có thể cần:
+    // Hiện tại chưa sử dụng _requestUserId, nhưng trong tương lai có thể cần:
     // 1. Kiểm tra xem người dùng có quyền xóa thread này không
     // 2. Ghi log hoạt động của người dùng
     // 3. Thực hiện các kiểm tra bảo mật khác

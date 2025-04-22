@@ -46,13 +46,13 @@ export class ReactionsController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         type: {
           type: 'string',
           enum: Object.values(ReactionType),
         },
         userId: { type: 'string' },
-        postId: { type: 'string', format: 'uuid' },
+        postId: { type: 'string' },
         // Add other reaction properties as needed
       },
     },
@@ -75,7 +75,6 @@ export class ReactionsController {
     name: 'id',
     description: 'Reaction ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiOkResponse({
@@ -83,13 +82,13 @@ export class ReactionsController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         type: {
           type: 'string',
           enum: Object.values(ReactionType),
         },
         userId: { type: 'string' },
-        postId: { type: 'string', format: 'uuid' },
+        postId: { type: 'string' },
         // Add other reaction properties as needed
       },
     },
@@ -105,7 +104,6 @@ export class ReactionsController {
     name: 'id',
     description: 'Post ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiOkResponse({
@@ -115,13 +113,13 @@ export class ReactionsController {
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string', format: 'uuid' },
+          id: { type: 'string' },
           type: {
             type: 'string',
             enum: Object.values(ReactionType),
           },
           userId: { type: 'string' },
-          postId: { type: 'string', format: 'uuid' },
+          postId: { type: 'string' },
           // Add other reaction properties as needed
         },
       },
@@ -138,7 +136,6 @@ export class ReactionsController {
     name: 'id',
     description: 'Reaction ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiBody({
@@ -166,13 +163,13 @@ export class ReactionsController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         type: {
           type: 'string',
           enum: Object.values(ReactionType),
         },
         userId: { type: 'string' },
-        postId: { type: 'string', format: 'uuid' },
+        postId: { type: 'string' },
         // Add other reaction properties as needed
       },
     },
@@ -198,7 +195,6 @@ export class ReactionsController {
     name: 'id',
     description: 'Reaction ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiResponse({

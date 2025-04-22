@@ -408,14 +408,15 @@ export class PostsService {
     // Find thread for this course
     const thread = await this.prisma.thread.findFirst({
       where: {
-        id: courseId,
+        resourceId: courseId,
         type: DiscussionType.COURSE_REVIEW,
         deletedAt: null,
       },
     });
 
     if (!thread) {
-      throw new NotFoundException('Course review thread not found');
+      // Return false instead of throwing an error if thread doesn't exist
+      return { hasReviewed: false };
     }
 
     // Check if user has a review post in this thread

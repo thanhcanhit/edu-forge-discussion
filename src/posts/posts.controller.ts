@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  ParseUUIDPipe,
   ParseBoolPipe,
   ParseIntPipe,
   Headers,
@@ -64,9 +63,12 @@ export class PostsController {
     },
   })
   hasUserReviewedCourse(
-    @Query('courseId', ParseUUIDPipe) courseId: string,
+    @Query('courseId') courseId: string,
     @Query('authorId') authorId: string,
   ): Promise<{ hasReviewed: boolean; reviewId?: string }> {
+    if (!courseId || !authorId) {
+      throw new BadRequestException('Both courseId and authorId are required');
+    }
     return this.postsService.hasUserReviewedCourse(courseId, authorId);
   }
 
@@ -126,7 +128,6 @@ export class PostsController {
     name: 'id',
     description: 'Post ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiQuery({
@@ -148,7 +149,7 @@ export class PostsController {
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string', format: 'uuid' },
+          id: { type: 'string' },
           content: { type: 'string' },
           // Include other post properties
           totalReplies: { type: 'number' },
@@ -158,7 +159,7 @@ export class PostsController {
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
   findReplies(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Query('page', ParseIntPipe) page?: number,
     @Query('limit', ParseIntPipe) limit?: number,
   ): Promise<PostWithTotalReplies[]> {
@@ -171,7 +172,6 @@ export class PostsController {
     name: 'id',
     description: 'Post ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiQuery({
@@ -185,7 +185,7 @@ export class PostsController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         content: { type: 'string' },
         title: { type: 'string' },
         // Include other post properties
@@ -195,7 +195,7 @@ export class PostsController {
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
   findOne(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Query('includeDeleted', new ParseBoolPipe({ optional: true }))
     includeDeleted = false,
   ): Promise<PostWithTotalReplies> {
@@ -208,7 +208,6 @@ export class PostsController {
     name: 'id',
     description: 'Post ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiQuery({
@@ -235,7 +234,7 @@ export class PostsController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid' },
+        id: { type: 'string' },
         content: { type: 'string' },
         title: { type: 'string' },
         // Include other post properties
@@ -249,7 +248,7 @@ export class PostsController {
     description: 'Forbidden - User is not the author',
   })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updatePostDto: UpdatePostDto,
     @Query('authorId') queryAuthorId?: string,
     @Headers('X-User-Id') headerUserId?: string,
@@ -272,7 +271,6 @@ export class PostsController {
     name: 'id',
     description: 'Post ID',
     type: 'string',
-    format: 'uuid',
     required: true,
   })
   @ApiQuery({
@@ -299,7 +297,7 @@ export class PostsController {
     description: 'Forbidden - User is not the author',
   })
   remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Query('authorId') queryAuthorId?: string,
     @Headers('X-User-Id') headerUserId?: string,
   ) {
