@@ -25,7 +25,7 @@ type PostWithReplies = Post & {
 export class PostsService {
   constructor(
     private prisma: PrismaService,
-    private threadGateway: ThreadsGateway,
+    private threadsGateway: ThreadsGateway,
     private notificationService: NotificationService,
   ) {}
 
@@ -100,7 +100,7 @@ export class PostsService {
     });
 
     // Notify thread participants
-    this.threadGateway.sendNewPostToThread(createPostDto.threadId, result);
+    this.threadsGateway.sendNewPostToThread(createPostDto.threadId, result);
 
     // If this is a reply, notify the parent post author
     if (createPostDto.parentId) {
@@ -323,7 +323,7 @@ export class PostsService {
     // Add reaction counts
     const reactionCounts = this.countReactionsByType(updatedPost.reactions);
 
-    this.threadGateway.sendUpdatedPostToThread(post.threadId, updatedPost);
+    this.threadsGateway.sendUpdatedPostToThread(post.threadId, updatedPost);
 
     return {
       ...updatedPost,
@@ -382,7 +382,7 @@ export class PostsService {
       }),
     ]);
 
-    this.threadGateway.sendDeletedPostToThread(post.threadId, id);
+    this.threadsGateway.sendDeletedPostToThread(post.threadId, id);
 
     return { success: true };
   }
