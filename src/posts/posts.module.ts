@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { PostsController } from './posts.controller';
-import { ThreadsGateway } from 'src/threads/threads.gateway';
-import { ThreadsService } from 'src/threads/threads.service';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaModule } from 'src/prisma/prisma.module';
+import { ThreadsModule } from 'src/threads/threads.module';
+import { NotificationModule } from 'src/notification/notification.module';
+
 @Module({
+  imports: [PrismaModule, ThreadsModule, NotificationModule],
   controllers: [PostsController],
-  providers: [PostsService, ThreadsGateway, ThreadsService, PrismaService],
+  providers: [PostsService],
+  exports: [PostsService],
 })
 export class PostsModule {}

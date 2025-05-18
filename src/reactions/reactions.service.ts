@@ -7,18 +7,23 @@ import { ReactionType } from '@prisma/client';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 import { ThreadsGateway } from '../threads/threads.gateway';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class ReactionsService {
   constructor(
     private prisma: PrismaService,
     private readonly threadsGateway: ThreadsGateway,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(createReactionDto: CreateReactionDto) {
     const post = await this.prisma.post.findUnique({
       where: { id: createReactionDto.postId },
-      include: { thread: true },
+      include: {
+        thread: true,
+        author: true,
+      } as any,
     });
 
     if (!post) {
@@ -36,12 +41,35 @@ export class ReactionsService {
       throw new BadRequestException('Reaction already exists');
     }
 
+    const user = await (this.prisma as any).user.findUnique({
+      where: { id: createReactionDto.userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     const reaction = await this.prisma.reaction.create({
       data: createReactionDto,
     });
 
     // Send real-time notification
-    this.threadsGateway.sendNewReactionToPost(post.thread.id, reaction);
+    this.threadsGateway.sendNewReactionToPost(
+      (post as any).thread.id,
+      reaction,
+    );
+
+    // Send notification to post author if different from reactor
+    if (post.authorId !== createReactionDto.userId) {
+      await this.notificationService.createReactionNotification({
+        postId: post.id,
+        postTitle: (post as any).title || 'Bài viết',
+        reactionType: reaction.type,
+        reactorName: user.name,
+        reactorId: user.id,
+        recipientId: post.authorId,
+      });
+    }
 
     return reaction;
   }

@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ReactionsService } from './reactions.service';
 import { ReactionsController } from './reactions.controller';
-import { ThreadsGateway } from '../threads/threads.gateway';
-import { ThreadsService } from 'src/threads/threads.service';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaModule } from 'src/prisma/prisma.module';
+import { ThreadsModule } from 'src/threads/threads.module';
+import { NotificationModule } from 'src/notification/notification.module';
+
 @Module({
+  imports: [PrismaModule, ThreadsModule, NotificationModule],
   controllers: [ReactionsController],
-  providers: [ReactionsService, ThreadsGateway, ThreadsService, PrismaService],
+  providers: [ReactionsService],
+  exports: [ReactionsService],
 })
 export class ReactionsModule {}

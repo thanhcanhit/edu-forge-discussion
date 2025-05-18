@@ -12,6 +12,8 @@ import {
   ReactionCounts,
 } from './interfaces/post.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { NotificationService } from 'src/notification/notification.service';
+
 type PostWithReplies = Post & {
   _count: {
     replies: number;
@@ -24,6 +26,7 @@ export class PostsService {
   constructor(
     private prisma: PrismaService,
     private threadGateway: ThreadsGateway,
+    private notificationService: NotificationService,
   ) {}
 
   async create(authorId: string, createPostDto: CreatePostDto) {
@@ -91,11 +94,33 @@ export class PostsService {
       include: {
         replies: true,
         reactions: true,
-      },
+        author: true,
+        thread: true,
+      } as any,
     });
 
     // Notify thread participants
     this.threadGateway.sendNewPostToThread(createPostDto.threadId, result);
+
+    // If this is a reply, notify the parent post author
+    if (createPostDto.parentId) {
+      const parentPost = await this.prisma.post.findUnique({
+        where: { id: createPostDto.parentId },
+        include: { author: true } as any,
+      });
+
+      if (parentPost && parentPost.authorId !== authorId) {
+        await this.notificationService.createCommentNotification({
+          postId: parentPost.id,
+          postTitle: (parentPost as any).title || 'Bài viết',
+          commentId: result.id,
+          commentContent: result.content,
+          commentAuthor: (result as any).author.name,
+          commentAuthorId: result.authorId,
+          recipientId: parentPost.authorId,
+        });
+      }
+    }
 
     return result;
   }
