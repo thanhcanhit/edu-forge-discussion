@@ -118,9 +118,35 @@ export class PostsService {
           postTitle: 'Bài viết',
           commentId: result.id,
           commentContent: result.content,
-          commentAuthor: 'User', // Since we don't have author relation
+          commentAuthor: 'User', // Since we don't have user relation
           commentAuthorId: result.authorId,
           recipientId: parentPost.authorId,
+        });
+      }
+    } else {
+      // For new main posts, notify all previous commenters in the thread
+      const previousCommenters = await this.prisma.post.findMany({
+        where: {
+          threadId: createPostDto.threadId,
+          authorId: { not: authorId }, // Exclude the current author
+          deletedAt: null,
+        },
+        select: {
+          authorId: true,
+        },
+        distinct: ['authorId'],
+      });
+
+      // Send notifications to all previous commenters
+      for (const commenter of previousCommenters) {
+        await this.notificationService.createCommentNotification({
+          postId: result.id,
+          postTitle: 'Bài viết',
+          commentId: result.id,
+          commentContent: result.content,
+          commentAuthor: 'User', // Since we don't have user relation
+          commentAuthorId: result.authorId,
+          recipientId: commenter.authorId,
         });
       }
     }

@@ -80,6 +80,8 @@ export class NotificationService {
     reactorName: string;
     reactorId: string;
     recipientId: string;
+    threadId: string;
+    postContent: string;
   }) {
     return this.createNotification({
       type: 'SOCIAL_LIKE',
@@ -94,6 +96,8 @@ export class NotificationService {
         reactionType: data.reactionType,
         reactorName: data.reactorName,
         reactorId: data.reactorId,
+        threadId: data.threadId,
+        postContent: data.postContent,
       },
       recipients: [data.recipientId],
     });

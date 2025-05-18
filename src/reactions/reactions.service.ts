@@ -56,6 +56,8 @@ export class ReactionsService {
         reactorName: 'User', // Since we don't have user relation
         reactorId: createReactionDto.userId,
         recipientId: post.authorId,
+        threadId: post.thread.id,
+        postContent: post.content,
       });
     }
 
