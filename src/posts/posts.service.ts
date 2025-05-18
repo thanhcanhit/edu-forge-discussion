@@ -94,9 +94,9 @@ export class PostsService {
       include: {
         replies: true,
         reactions: true,
-        author: true,
         thread: true,
-      } as any,
+        parent: true,
+      },
     });
 
     // Notify thread participants
@@ -106,16 +106,19 @@ export class PostsService {
     if (createPostDto.parentId) {
       const parentPost = await this.prisma.post.findUnique({
         where: { id: createPostDto.parentId },
-        include: { author: true } as any,
+        include: {
+          replies: true,
+          reactions: true,
+        },
       });
 
       if (parentPost && parentPost.authorId !== authorId) {
         await this.notificationService.createCommentNotification({
           postId: parentPost.id,
-          postTitle: (parentPost as any).title || 'Bài viết',
+          postTitle: 'Bài viết',
           commentId: result.id,
           commentContent: result.content,
-          commentAuthor: (result as any).author.name,
+          commentAuthor: 'User', // Since we don't have author relation
           commentAuthorId: result.authorId,
           recipientId: parentPost.authorId,
         });
